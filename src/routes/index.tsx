@@ -642,17 +642,17 @@ function CalculatorSection({
       </div>
 
       <div className="grid min-w-0 max-w-full gap-5 sm:gap-6 lg:grid-cols-12 lg:gap-8">
-        {/* LEFT COLUMN: FILTERS & INPUTS */}
-        <div className="min-w-0 max-w-full space-y-4 sm:space-y-5 lg:col-span-5">
+        {/* LEFT COLUMN: FILTERS & INPUTS — UNIFIED LUXURY CONTROL PANEL */}
+        <div className="min-w-0 max-w-full space-y-4 sm:space-y-4.5 lg:col-span-5 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 bg-card/35 border border-border/40 backdrop-blur-md">
           {/* 1. AREA SELECTION */}
           <div className="space-y-1.5">
-            <span className="block text-xs font-medium text-muted-foreground">1. المنطقة (زايد أو التجمع)</span>
-            <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+            <span className="block text-xs font-semibold text-muted-foreground">1. اختر المنطقة</span>
+            <div className="grid grid-cols-3 gap-1 rounded-2xl bg-secondary/40 p-1 border border-border/40">
               <button
                 type="button"
                 onClick={() => { setSelectedArea("all"); setCafeId(null); }}
-                className={`rounded-xl px-1.5 py-2 sm:px-2 sm:py-2.5 text-center text-[11px] sm:text-xs font-medium transition truncate ${
-                  selectedArea === "all" ? "bg-primary text-primary-foreground shadow-glow font-bold" : "border border-border/80 bg-background/50 hover:bg-primary/10 text-foreground"
+                className={`rounded-xl px-2 py-2 text-center text-xs font-semibold transition ${
+                  selectedArea === "all" ? "bg-primary text-primary-foreground shadow-sm font-bold" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
                 }`}
               >
                 كل المناطق
@@ -660,8 +660,8 @@ function CalculatorSection({
               <button
                 type="button"
                 onClick={() => { setSelectedArea("sheikh_zayed"); setCafeId(null); }}
-                className={`flex items-center justify-center gap-1 rounded-xl px-1.5 py-2 sm:px-2 sm:py-2.5 text-center text-[11px] sm:text-xs font-medium transition truncate ${
-                  selectedArea === "sheikh_zayed" ? "bg-primary text-primary-foreground shadow-glow font-bold" : "border border-border/80 bg-background/50 hover:bg-primary/10 text-foreground"
+                className={`flex items-center justify-center gap-1 rounded-xl px-2 py-2 text-center text-xs font-semibold transition ${
+                  selectedArea === "sheikh_zayed" ? "bg-primary text-primary-foreground shadow-sm font-bold" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
                 }`}
               >
                 <MapPin className="h-3 w-3 shrink-0" /> <span className="truncate">الشيخ زايد</span>
@@ -669,8 +669,8 @@ function CalculatorSection({
               <button
                 type="button"
                 onClick={() => { setSelectedArea("tagamoa"); setCafeId(null); }}
-                className={`flex items-center justify-center gap-1 rounded-xl px-1.5 py-2 sm:px-2 sm:py-2.5 text-center text-[11px] sm:text-xs font-medium transition truncate ${
-                  selectedArea === "tagamoa" ? "bg-primary text-primary-foreground shadow-glow font-bold" : "border border-border/80 bg-background/50 hover:bg-primary/10 text-foreground"
+                className={`flex items-center justify-center gap-1 rounded-xl px-2 py-2 text-center text-xs font-semibold transition ${
+                  selectedArea === "tagamoa" ? "bg-primary text-primary-foreground shadow-sm font-bold" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
                 }`}
               >
                 <MapPin className="h-3 w-3 shrink-0" /> <span className="truncate">التجمع الخامس</span>
@@ -680,13 +680,13 @@ function CalculatorSection({
 
           {/* 2. PREFERENCE: DRINK OR FOOD */}
           <div className="space-y-1.5">
-            <span className="block text-xs font-medium text-muted-foreground">2. عايز إيه في الخروجة؟</span>
-            <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+            <span className="block text-xs font-semibold text-muted-foreground">2. طبيعة الخروجة</span>
+            <div className="grid grid-cols-3 gap-1 rounded-2xl bg-secondary/40 p-1 border border-border/40">
               <button
                 type="button"
                 onClick={() => setItemType("drink")}
-                className={`flex items-center justify-center gap-1 rounded-xl px-1.5 py-2 sm:px-2.5 sm:py-2.5 text-center text-[11px] sm:text-xs font-medium transition truncate ${
-                  itemType === "drink" ? "bg-primary text-primary-foreground shadow-glow font-bold" : "border border-border/80 bg-background/50 hover:bg-primary/10 text-foreground"
+                className={`flex items-center justify-center gap-1 rounded-xl px-2 py-2 text-center text-xs font-semibold transition ${
+                  itemType === "drink" ? "bg-primary text-primary-foreground shadow-sm font-bold" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
                 }`}
               >
                 <Coffee className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">مشروبات وقهوة</span>
@@ -694,8 +694,8 @@ function CalculatorSection({
               <button
                 type="button"
                 onClick={() => setItemType("food")}
-                className={`flex items-center justify-center gap-1 rounded-xl px-1.5 py-2 sm:px-2.5 sm:py-2.5 text-center text-[11px] sm:text-xs font-medium transition truncate ${
-                  itemType === "food" ? "bg-primary text-primary-foreground shadow-glow font-bold" : "border border-border/80 bg-background/50 hover:bg-primary/10 text-foreground"
+                className={`flex items-center justify-center gap-1 rounded-xl px-2 py-2 text-center text-xs font-semibold transition ${
+                  itemType === "food" ? "bg-primary text-primary-foreground shadow-sm font-bold" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
                 }`}
               >
                 <Utensils className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">أكل وحلويات</span>
@@ -703,8 +703,8 @@ function CalculatorSection({
               <button
                 type="button"
                 onClick={() => setItemType("combo")}
-                className={`flex items-center justify-center gap-1 rounded-xl px-1.5 py-2 sm:px-2.5 sm:py-2.5 text-center text-[11px] sm:text-xs font-medium transition truncate ${
-                  itemType === "combo" ? "bg-primary text-primary-foreground shadow-glow font-bold" : "border border-border/80 bg-background/50 hover:bg-primary/10 text-foreground"
+                className={`flex items-center justify-center gap-1 rounded-xl px-2 py-2 text-center text-xs font-semibold transition ${
+                  itemType === "combo" ? "bg-primary text-primary-foreground shadow-sm font-bold" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
                 }`}
               >
                 <Sparkles className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">ميكس خروجة</span>
@@ -715,12 +715,12 @@ function CalculatorSection({
           {/* 3. FACILITIES & MOOD MULTI-SELECT */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <span className="block text-xs font-medium text-muted-foreground">3. خدمات ومرافق تهمك (تؤثر على الترشيح):</span>
+              <span className="block text-xs font-semibold text-muted-foreground">3. خدمات ومرافق تهمك:</span>
               {selectedFacilities.length > 0 && (
                 <button
                   type="button"
                   onClick={() => setSelectedFacilities([])}
-                  className="text-[10px] text-primary hover:underline"
+                  className="text-[11px] text-primary hover:underline"
                 >
                   إلغاء التحديد ({selectedFacilities.length})
                 </button>
@@ -734,13 +734,13 @@ function CalculatorSection({
                     key={fac.key}
                     type="button"
                     onClick={() => toggleFacility(fac.key)}
-                    className={`flex items-center gap-1 rounded-xl px-2.5 py-1 text-xs transition ${
+                    className={`flex items-center gap-1 rounded-xl px-2.5 py-1 text-xs transition border ${
                       isSelected
-                        ? "bg-primary text-primary-foreground font-bold shadow-glow"
-                        : "border border-border/70 bg-background/50 hover:bg-primary/10 text-muted-foreground"
+                        ? "bg-primary/20 text-primary border-primary/50 font-bold"
+                        : "bg-secondary/20 text-muted-foreground border-border/40 hover:bg-secondary/50 hover:text-foreground"
                     }`}
                   >
-                    {isSelected && <Check className="h-3 w-3" />}
+                    {isSelected && <Check className="h-3 w-3 text-primary" />}
                     {fac.label}
                   </button>
                 );
@@ -748,13 +748,13 @@ function CalculatorSection({
             </div>
           </div>
 
-          {/* 4. BUDGET INPUT (BY TYPING) */}
-          <div className="space-y-1.5">
+          {/* 4. BUDGET INPUT & PRESETS */}
+          <div className="space-y-2 rounded-2xl bg-secondary/20 p-3 sm:p-3.5 border border-border/40">
             <div className="flex items-center justify-between">
-              <label htmlFor="budget-input" className="text-xs font-medium text-muted-foreground">
-                4. اكتب ميزانيتك الإجمالية (بالفلوس)
+              <label htmlFor="budget-input" className="text-xs font-semibold text-muted-foreground">
+                4. ميزانيتك الإجمالية للخروجة
               </label>
-              <span className="font-display text-sm sm:text-base font-bold text-primary">{budget} ج.م</span>
+              <span className="font-display text-base font-bold text-primary">{budget} ج.م</span>
             </div>
             <div className="relative flex items-center">
               <input
@@ -765,71 +765,71 @@ function CalculatorSection({
                 value={budget || ""}
                 onChange={(e) => setBudget(Math.max(0, Number(e.target.value)))}
                 placeholder="اكتب المبلغ هنا..."
-                className="w-full rounded-2xl border border-border bg-background/60 py-2.5 pr-4 pl-14 sm:py-3 sm:pl-16 font-display text-base sm:text-lg text-foreground outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
+                className="w-full rounded-xl border border-border/60 bg-background/60 py-2 pr-3.5 pl-12 font-display text-base text-foreground outline-none transition focus:border-primary"
               />
-              <span className="pointer-events-none absolute left-3.5 sm:left-4 text-xs sm:text-sm font-semibold text-primary">
+              <span className="pointer-events-none absolute left-3.5 text-xs font-bold text-primary">
                 ج.م
               </span>
             </div>
-            <div className="flex flex-wrap gap-1.5 pt-1">
+            <div className="flex flex-wrap gap-1.5 pt-0.5">
               {[150, 250, 400, 600, 1000, 1500].map((preset) => (
                 <button
                   key={preset}
                   type="button"
                   onClick={() => setBudget(preset)}
-                  className={`rounded-full px-2.5 py-1 text-xs transition ${
+                  className={`rounded-lg px-2.5 py-1 text-xs transition border ${
                     budget === preset
-                      ? "bg-primary font-semibold text-primary-foreground shadow-glow"
-                      : "border border-border/80 bg-background/40 text-muted-foreground hover:bg-primary/10 hover:text-foreground"
+                      ? "bg-primary text-primary-foreground font-bold border-primary shadow-sm"
+                      : "bg-background/40 text-muted-foreground border-border/40 hover:text-foreground hover:bg-secondary/40"
                   }`}
                 >
                   {preset} ج.م
                 </button>
               ))}
             </div>
-          </div>
 
-          {/* 5. TRANSPORTATION BUDGET (OPTIONAL) */}
-          <div className="space-y-1.5 rounded-2xl border border-border/70 bg-background/40 p-2.5 sm:p-3">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                <Car className="h-3.5 w-3.5 text-primary" /> ميزانية مواصلات (أوبر / بنزين اختياري):
-              </label>
-              <span className="text-xs font-bold text-primary">{transportationBudget} ج.م</span>
+            {/* 5. TRANSPORTATION BUDGET (SEAMLESSLY INTEGRATED) */}
+            <div className="pt-2 border-t border-border/30 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <Car className="h-3.5 w-3.5 text-primary" /> ميزانية مواصلات (أوبر / بنزين اختياري):
+                </label>
+                <span className="text-xs font-bold text-primary">{transportationBudget} ج.م</span>
+              </div>
+              <div className="grid grid-cols-4 gap-1.5">
+                {[0, 50, 100, 150].map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setTransportationBudget(t)}
+                    className={`rounded-xl py-1 text-xs transition border ${
+                      transportationBudget === t
+                        ? "bg-primary text-primary-foreground font-bold border-primary"
+                        : "bg-background/40 text-muted-foreground border-border/40 hover:bg-secondary/40 hover:text-foreground"
+                    }`}
+                  >
+                    {t === 0 ? "بدون" : `${t} ج.م`}
+                  </button>
+                ))}
+              </div>
+              {transportationBudget > 0 && (
+                <p className="text-[11px] text-muted-foreground pt-0.5">
+                  المتبقي لطلبات الكافيه: <strong className="text-foreground">{effectiveCafeBudget} ج.م</strong> (~{budgetPerPerson} ج.م/فرد)
+                </p>
+              )}
             </div>
-            <div className="grid grid-cols-4 gap-1.5 pt-1">
-              {[0, 50, 100, 150].map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setTransportationBudget(t)}
-                  className={`rounded-xl py-1.5 text-xs transition ${
-                    transportationBudget === t
-                      ? "bg-primary text-primary-foreground font-bold"
-                      : "border border-border/80 bg-background/50 text-muted-foreground hover:bg-primary/10"
-                  }`}
-                >
-                  {t === 0 ? "بدون" : `${t} ج.م`}
-                </button>
-              ))}
-            </div>
-            {transportationBudget > 0 && (
-              <p className="text-[10px] text-muted-foreground pt-1">
-                المتبقي لطلبات الكافيه: <strong className="text-foreground">{effectiveCafeBudget} ج.م</strong> (~{budgetPerPerson} ج.م/فرد)
-              </p>
-            )}
           </div>
 
           {/* 6. PEOPLE COUNT & TAX TOGGLES */}
           <div className="grid gap-2 sm:grid-cols-2">
-            <div className="flex items-center justify-between rounded-2xl border border-border/70 bg-background/40 p-2.5 sm:p-3">
-              <span className="text-xs text-muted-foreground">عدد الأفراد:</span>
+            <div className="flex items-center justify-between rounded-2xl bg-secondary/20 border border-border/40 p-2.5 sm:p-3">
+              <span className="text-xs font-medium text-muted-foreground">عدد الأفراد:</span>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   aria-label="أقل"
                   onClick={() => setPeople(Math.max(1, people - 1))}
-                  className="grid h-7 w-7 place-items-center rounded-full border border-border hover:bg-primary/10"
+                  className="grid h-7 w-7 place-items-center rounded-full border border-border/60 hover:bg-primary/10 transition"
                 >
                   <Minus className="h-3 w-3" />
                 </button>
@@ -838,30 +838,30 @@ function CalculatorSection({
                   type="button"
                   aria-label="أكثر"
                   onClick={() => setPeople(Math.min(10, people + 1))}
-                  className="grid h-7 w-7 place-items-center rounded-full border border-border hover:bg-primary/10"
+                  className="grid h-7 w-7 place-items-center rounded-full border border-border/60 hover:bg-primary/10 transition"
                 >
                   <Plus className="h-3 w-3" />
                 </button>
               </div>
             </div>
 
-            <div className="flex flex-col justify-center rounded-2xl border border-border/70 bg-background/40 p-2.5 text-xs space-y-1">
-              <label className="flex items-center justify-between cursor-pointer">
+            <div className="flex flex-col justify-center rounded-2xl bg-secondary/20 border border-border/40 p-2.5 text-xs space-y-1.5">
+              <label className="flex items-center justify-between cursor-pointer select-none">
                 <span className="text-muted-foreground">رسوم الخدمة (12%):</span>
                 <input
                   type="checkbox"
                   checked={hasServiceCharge}
                   onChange={(e) => setHasServiceCharge(e.target.checked)}
-                  className="accent-primary h-3.5 w-3.5"
+                  className="accent-primary h-4 w-4 rounded cursor-pointer"
                 />
               </label>
-              <label className="flex items-center justify-between cursor-pointer">
+              <label className="flex items-center justify-between cursor-pointer select-none">
                 <span className="text-muted-foreground">الضريبة (14% VAT):</span>
                 <input
                   type="checkbox"
                   checked={hasVat}
                   onChange={(e) => setHasVat(e.target.checked)}
-                  className="accent-primary h-3.5 w-3.5"
+                  className="accent-primary h-4 w-4 rounded cursor-pointer"
                 />
               </label>
             </div>
@@ -890,7 +890,7 @@ function CalculatorSection({
                 onChange={(e) => { setSearchTerm(e.target.value); setIsSearchOpen(true); }}
                 onFocus={() => setIsSearchOpen(true)}
                 placeholder={activeCafe ? `${activeCafe.name} (${AREA_CLASS_LABELS[activeCafe.area_class] ?? activeCafe.area})` : "اكتب اسم كافيه..."}
-                className="w-full rounded-xl border border-border bg-background/60 py-2.5 pr-10 pl-9 text-xs text-foreground outline-none transition focus:border-primary"
+                className="w-full rounded-xl border border-border/60 bg-background/60 py-2.5 pr-10 pl-9 text-xs text-foreground outline-none transition focus:border-primary"
               />
               {searchTerm && (
                 <button
@@ -922,7 +922,7 @@ function CalculatorSection({
                       }`}
                     >
                       <div className="flex flex-col text-right min-w-0 pr-1">
-                        <span className="font-medium truncate">{c.name}</span>
+                        <span className="font-medium truncate" dir="auto">{c.name}</span>
                         <span className="text-[10px] text-muted-foreground truncate">{AREA_CLASS_LABELS[c.area_class] ?? c.area}</span>
                       </div>
                       {c.rating != null && (
@@ -941,41 +941,41 @@ function CalculatorSection({
         {/* RIGHT COLUMN: RECOMMENDED BEST CAFE SPOTLIGHT + WHAT YOU CAN GET + SOCIALS */}
         <div className="min-w-0 max-w-full space-y-4 sm:space-y-5 lg:col-span-7">
           {/* STRATEGY SWITCHER */}
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border/70 bg-background/40 p-2.5 sm:p-3">
-            <div className="flex items-center gap-1.5">
-              <Sparkles className="h-4 w-4 text-primary shrink-0" />
-              <span className="text-xs font-bold text-foreground">معيار الاختيار:</span>
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border/40 bg-card/35 p-2 sm:p-2.5">
+            <div className="flex items-center gap-1.5 px-1">
+              <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" />
+              <span className="text-xs font-semibold text-foreground">معيار الاختيار:</span>
             </div>
-            <div className="flex flex-wrap gap-1 sm:gap-1.5">
+            <div className="flex flex-wrap gap-1">
               <button
                 type="button"
                 onClick={() => setRankingStrategy("smart")}
-                className={`rounded-xl px-2.5 py-1 text-[11px] transition ${
+                className={`rounded-xl px-2.5 py-1 text-xs font-medium transition ${
                   rankingStrategy === "smart"
-                    ? "bg-primary text-primary-foreground shadow-glow font-bold"
-                    : "border border-border/80 bg-background/50 text-muted-foreground hover:bg-primary/10 hover:text-foreground"
+                    ? "bg-primary text-primary-foreground font-bold shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
                 }`}
               >
-                🎯 الأذكى لميزانيتك (أفضل قيمة)
+                🎯 الأنسب لميزانيتك
               </button>
               <button
                 type="button"
                 onClick={() => setRankingStrategy("rating")}
-                className={`rounded-xl px-2.5 py-1 text-[11px] transition ${
+                className={`rounded-xl px-2.5 py-1 text-xs font-medium transition ${
                   rankingStrategy === "rating"
-                    ? "bg-primary text-primary-foreground shadow-glow font-bold"
-                    : "border border-border/80 bg-background/50 text-muted-foreground hover:bg-primary/10 hover:text-foreground"
+                    ? "bg-primary text-primary-foreground font-bold shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
                 }`}
               >
-                ⭐ الأعلى تقييماً (Bayesian)
+                ⭐ الأعلى تقييماً
               </button>
               <button
                 type="button"
                 onClick={() => setRankingStrategy("budget")}
-                className={`rounded-xl px-2.5 py-1 text-[11px] transition ${
+                className={`rounded-xl px-2.5 py-1 text-xs font-medium transition ${
                   rankingStrategy === "budget"
-                    ? "bg-primary text-primary-foreground shadow-glow font-bold"
-                    : "border border-border/80 bg-background/50 text-muted-foreground hover:bg-primary/10 hover:text-foreground"
+                    ? "bg-primary text-primary-foreground font-bold shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
                 }`}
               >
                 💰 الأكثر توفيراً
@@ -984,18 +984,18 @@ function CalculatorSection({
           </div>
 
           {/* TOP MATCHED SUGGESTIONS TABS */}
-          <div className="space-y-2 min-w-0 max-w-full">
+          <div className="space-y-1.5 min-w-0 max-w-full">
             <div className="flex items-center justify-between px-1">
               <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                <span className="h-2 w-2 rounded-full bg-primary" />
                 أفضل الكافيهات المقترحة لميزانيتك ({budget} ج.م):
               </span>
               <span className="text-[11px] text-muted-foreground">
-                {selectedArea === "sheikh_zayed" ? "الشيخ زايد" : selectedArea === "tagamoa" ? "التجمع الخامس" : "القاهرة"}
+                {selectedArea === "sheikh_zayed" ? "الشيخ زايد" : selectedArea === "tagamoa" ? "التجمع الخامس" : "كل المناطق"}
               </span>
             </div>
 
-            <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] touch-pan-x min-w-0 max-w-full">
+            <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] touch-pan-x min-w-0 max-w-full">
               {bestMatchedCafes.map((sc, idx) => {
                 const isSelected = sc.cafe.id === activeCafe.id;
                 return (
@@ -1003,17 +1003,22 @@ function CalculatorSection({
                     key={sc.cafe.id}
                     type="button"
                     onClick={() => setCafeId(sc.cafe.id)}
-                    className={`flex shrink-0 items-center gap-2 rounded-2xl px-3.5 py-2 text-right text-xs transition-all ${
+                    className={`flex shrink-0 items-center gap-2 rounded-xl px-3 py-1.5 text-right text-xs transition border ${
                       isSelected
-                        ? "bg-primary text-primary-foreground shadow-glow font-bold scale-[1.02]"
-                        : "border border-border/60 bg-card/60 text-muted-foreground hover:text-foreground hover:bg-card hover:border-border"
+                        ? "bg-primary text-primary-foreground border-primary font-bold shadow-sm"
+                        : "border-border/40 bg-card/40 text-muted-foreground hover:text-foreground hover:bg-card/80"
                     }`}
                   >
-                    <span className="text-[11px] opacity-70">#{idx + 1}</span>
-                    <span className="font-semibold truncate max-w-[110px] sm:max-w-[140px]">{sc.cafe.name}</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isSelected ? "bg-black/20 text-white" : "bg-primary/10 text-primary"}`}>
+                    <span className="text-[10px] opacity-70">#{idx + 1}</span>
+                    <span className="font-semibold truncate max-w-[120px] sm:max-w-[150px]" dir="auto">{sc.cafe.name}</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? "bg-black/20 text-white" : "bg-primary/15 text-primary font-bold"}`}>
                       {sc.matchScore}%
                     </span>
+                    {sc.cafe.rating != null && (
+                      <span className="text-[10px] flex items-center gap-0.5 opacity-90">
+                        ★{Number(sc.cafe.rating).toFixed(1)}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -1021,7 +1026,7 @@ function CalculatorSection({
           </div>
 
           {/* ACTIVE CAFE SPOTLIGHT CARD — CLEAN, AIRY, LUXURIOUS */}
-          <div className="min-w-0 max-w-full rounded-3xl border border-border/60 bg-card/40 backdrop-blur-xl overflow-hidden shadow-2xl transition-all">
+          <div className="min-w-0 max-w-full rounded-3xl border border-border/50 bg-card/40 backdrop-blur-xl overflow-hidden shadow-2xl transition-all">
             {/* HERO COVER PHOTO */}
             <div className="relative h-48 sm:h-60 w-full overflow-hidden bg-muted group">
               {activePhoto ? (
@@ -1036,12 +1041,12 @@ function CalculatorSection({
                   <Aperture className="h-12 w-12" />
                 </div>
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
 
               {/* Floating Top Badges */}
               <div className="absolute top-3 inset-x-3 sm:inset-x-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-black/50 backdrop-blur-md px-3 py-1 text-xs font-bold text-amber-400 border border-white/10 shadow-sm">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-black/55 backdrop-blur-md px-3 py-1 text-xs font-bold text-amber-400 border border-white/10 shadow-sm">
                     <Sparkles className="h-3.5 w-3.5" />
                     {activeScoredCafe.matchScore}% توافق ميزانية
                   </span>
@@ -1055,10 +1060,11 @@ function CalculatorSection({
                   <button
                     type="button"
                     onClick={() => toggleFavorite(activeCafe.id)}
-                    className={`grid h-8 w-8 place-items-center rounded-full bg-black/40 backdrop-blur-md border border-white/10 transition ${
+                    className={`grid h-8 w-8 place-items-center rounded-full bg-black/45 backdrop-blur-md border border-white/10 transition ${
                       isCurrentFav ? "text-rose-400" : "text-white/80 hover:text-rose-400"
                     }`}
                     title={isCurrentFav ? "في المفضلة" : "أضف للمفضلة"}
+                    aria-label={isCurrentFav ? "إزالة من المفضلة" : "إضافة للمفضلة"}
                   >
                     <Heart className={`h-4 w-4 ${isCurrentFav ? "fill-rose-500 text-rose-500" : ""}`} />
                   </button>
@@ -1066,10 +1072,11 @@ function CalculatorSection({
                   <button
                     type="button"
                     onClick={() => toggleCompareCafe(activeCafe.id)}
-                    className={`grid h-8 w-8 place-items-center rounded-full bg-black/40 backdrop-blur-md border border-white/10 transition ${
+                    className={`grid h-8 w-8 place-items-center rounded-full bg-black/45 backdrop-blur-md border border-white/10 transition ${
                       isCurrentInCompare ? "text-primary" : "text-white/80 hover:text-primary"
                     }`}
                     title={isCurrentInCompare ? "في المقارنة" : "مقارنة"}
+                    aria-label={isCurrentInCompare ? "إزالة من المقارنة" : "إضافة للمقارنة"}
                   >
                     <GitCompareArrows className="h-4 w-4" />
                   </button>
@@ -1082,6 +1089,7 @@ function CalculatorSection({
                   to="/cafes/$slug"
                   params={{ slug: activeCafe.slug }}
                   className="font-display text-2xl sm:text-3xl font-black text-foreground drop-shadow-md hover:text-primary transition-colors block leading-snug"
+                  dir="auto"
                 >
                   {activeCafe.name}
                 </Link>
@@ -1095,6 +1103,9 @@ function CalculatorSection({
                   {activeCafe.rating != null && (
                     <span className="flex items-center gap-1 bg-black/40 backdrop-blur-md px-2 py-0.5 rounded-full text-amber-400 font-bold border border-white/10">
                       <Star className="h-3 w-3 fill-current" /> {Number(activeCafe.rating).toFixed(1)}
+                      {activeCafe.rating_count != null && (
+                        <span className="text-[10px] text-muted-foreground font-normal">({activeCafe.rating_count})</span>
+                      )}
                     </span>
                   )}
 
@@ -1106,24 +1117,24 @@ function CalculatorSection({
             </div>
 
             {/* CARD BODY CONTENT */}
-            <div className="p-4 sm:p-6 space-y-4">
+            <div className="p-4 sm:p-5 space-y-4">
               {/* CLEAN FINANCIAL SUMMARY ROW */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                <div className="rounded-2xl bg-secondary/30 border border-border/40 p-3 text-center sm:text-right">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5">
+                <div className="rounded-2xl bg-secondary/30 border border-border/40 p-2.5 sm:p-3 text-center sm:text-right">
                   <span className="text-[11px] text-muted-foreground block">المتوقع للفرد</span>
-                  <span className="font-display text-lg font-bold text-foreground">
+                  <span className="font-display text-base sm:text-lg font-bold text-foreground">
                     ~{activeScoredCafe.expectedCost} <span className="text-xs font-normal text-muted-foreground">ج.م</span>
                   </span>
                 </div>
 
-                <div className="rounded-2xl bg-secondary/30 border border-border/40 p-3 text-center sm:text-right">
+                <div className="rounded-2xl bg-secondary/30 border border-border/40 p-2.5 sm:p-3 text-center sm:text-right">
                   <span className="text-[11px] text-muted-foreground block">الإجمالي بالخدمة والضريبة</span>
-                  <span className="font-display text-lg font-bold text-primary">
+                  <span className="font-display text-base sm:text-lg font-bold text-primary">
                     {smartRecommendation.outingTotalWithTransport} <span className="text-xs font-normal text-muted-foreground">ج.م</span>
                   </span>
                 </div>
 
-                <div className="col-span-2 sm:col-span-1 rounded-2xl bg-secondary/30 border border-border/40 p-3 flex flex-col justify-center text-center sm:text-right">
+                <div className="col-span-2 sm:col-span-1 rounded-2xl bg-secondary/30 border border-border/40 p-2.5 sm:p-3 flex flex-col justify-center text-center sm:text-right">
                   <span className="text-[11px] text-muted-foreground block">حالة الميزانية</span>
                   <span className={`text-xs font-bold ${smartRecommendation.isWithinBudget ? "text-emerald-400" : "text-amber-400"}`}>
                     {smartRecommendation.isWithinBudget
@@ -1134,21 +1145,21 @@ function CalculatorSection({
               </div>
 
               {/* PROPOSED ORDER (WHAT TO GET) */}
-              <div className="rounded-2xl border border-border/40 bg-card/50 p-3.5 space-y-2">
+              <div className="rounded-2xl border border-border/40 bg-card/50 p-3 sm:p-3.5 space-y-2">
                 <div className="flex items-center justify-between text-xs font-semibold text-foreground">
                   <span className="flex items-center gap-1.5">
                     <Coffee className="h-4 w-4 text-primary" />
-                    طلب مقترح يناسب ميزانيتك ({people > 1 ? `${people} أفراد` : "فرد واحد"}):
+                    تقدر تطلب إيه بميزانيتك ({people > 1 ? `${people} أفراد` : "فرد واحد"}):
                   </span>
                   <span className="text-[11px] text-muted-foreground">شامل الضريبة والخدمة</span>
                 </div>
 
                 <div className="space-y-1.5">
                   {smartRecommendation.items.slice(0, 2).map((item) => (
-                    <div key={item.id} className="flex items-center justify-between text-xs py-1 px-2.5 rounded-xl bg-background/50">
+                    <div key={item.id} className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-background/50 border border-border/30">
                       <div className="flex items-center gap-2 truncate">
                         <Check className="h-3.5 w-3.5 text-primary shrink-0" />
-                        <span className="font-medium text-foreground truncate">{item.name}</span>
+                        <span className="font-medium text-foreground truncate" dir="auto">{item.name}</span>
                       </div>
                       <span className="font-bold text-foreground shrink-0">{item.price} ج.م</span>
                     </div>
@@ -1167,44 +1178,53 @@ function CalculatorSection({
                   <ChevronLeft className="h-4 w-4 shrink-0" />
                 </Link>
 
-                <div className="flex items-center justify-between gap-2 pt-1">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 pt-1">
                   <button
                     type="button"
                     onClick={() => setShowFullMenu(true)}
-                    className="flex-1 rounded-xl border border-border/60 bg-secondary/30 hover:bg-secondary/60 py-2 px-3 text-center text-xs font-semibold text-muted-foreground hover:text-foreground transition"
+                    className="flex items-center justify-center gap-1.5 rounded-xl border border-border/50 bg-secondary/30 hover:bg-secondary/60 py-2.5 px-3 text-xs font-semibold text-foreground transition"
                   >
-                    تخصيص الفاتورة
+                    <span>تخصيص الفاتورة</span>
                   </button>
 
                   <a
                     href={activeCafe.maps_url || `https://maps.google.com/?q=${encodeURIComponent(activeCafe.name + " " + activeCafe.area)}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-secondary/30 hover:bg-secondary/60 py-2 px-3 text-xs font-semibold text-muted-foreground hover:text-primary transition"
+                    className="flex items-center justify-center gap-1.5 rounded-xl border border-border/50 bg-secondary/30 hover:bg-secondary/60 py-2.5 px-3 text-xs font-semibold text-foreground hover:text-primary transition"
                   >
                     <MapPin className="h-3.5 w-3.5 text-primary" />
-                    <span>الخريطة</span>
+                    <span>خرائط جوجل</span>
                   </a>
 
-                  {activeCafe.phone && (
+                  {activeCafe.phone ? (
                     <a
                       href={`tel:${activeCafe.phone}`}
-                      className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-secondary/30 hover:bg-secondary/60 py-2 px-3 text-xs font-semibold text-muted-foreground hover:text-foreground transition"
+                      className="flex items-center justify-center gap-1.5 rounded-xl border border-border/50 bg-secondary/30 hover:bg-secondary/60 py-2.5 px-3 text-xs font-semibold text-foreground transition"
                       dir="ltr"
                     >
                       <Phone className="h-3.5 w-3.5 text-primary" />
-                      <span>اتصال</span>
+                      <span>{activeCafe.phone}</span>
                     </a>
+                  ) : (
+                    <Link
+                      to="/cafes/$slug"
+                      params={{ slug: activeCafe.slug }}
+                      className="flex items-center justify-center gap-1.5 rounded-xl border border-border/50 bg-secondary/30 hover:bg-secondary/60 py-2.5 px-3 text-xs font-semibold text-foreground transition"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5 text-primary" />
+                      <span>صفحة الكافيه</span>
+                    </Link>
                   )}
 
                   <a
                     href={`https://wa.me/?text=${whatsappMessage}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 py-2 px-3 text-xs font-semibold text-emerald-400 transition"
+                    className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-950/40 hover:bg-emerald-900/50 py-2.5 px-3 text-xs font-semibold text-emerald-300 transition"
                   >
                     <MessageCircle className="h-3.5 w-3.5" />
-                    <span>مشاركة</span>
+                    <span>مشاركة الخطة</span>
                   </a>
                 </div>
               </div>
@@ -1226,7 +1246,7 @@ function CalculatorSection({
                       setCafeId(altCafe.id);
                       calcRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
                     }}
-                    className="rounded-2xl border border-border/50 bg-card/40 hover:bg-card/80 hover:border-primary/40 p-3 text-right transition-all flex flex-col justify-between group"
+                    className="rounded-2xl border border-border/40 bg-card/40 hover:bg-card/80 hover:border-primary/40 p-3 text-right transition-all flex flex-col justify-between group"
                   >
                     <div>
                       <div className="flex justify-between items-center text-[10px] mb-1">
@@ -1235,7 +1255,7 @@ function CalculatorSection({
                           <Star className="h-2.5 w-2.5 fill-current" />★{score.bayesianRating.toFixed(1)}
                         </span>
                       </div>
-                      <h5 className="font-bold text-xs text-foreground group-hover:text-primary transition-colors truncate">
+                      <h5 className="font-bold text-xs text-foreground group-hover:text-primary transition-colors truncate" dir="auto">
                         {altCafe.name}
                       </h5>
                       <p className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">{rationale}</p>
@@ -1251,7 +1271,7 @@ function CalculatorSection({
 
           {/* MORE MATCHING CAFES GRID */}
           {scoredCafes.length > 1 && (
-            <div className="min-w-0 max-w-full space-y-3 rounded-2xl border border-border/70 bg-background/40 p-3.5 sm:p-4">
+            <div className="min-w-0 max-w-full space-y-3 rounded-2xl sm:rounded-3xl border border-border/40 bg-card/35 p-3.5 sm:p-5">
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="font-display text-sm font-bold text-foreground">
@@ -1273,8 +1293,8 @@ function CalculatorSection({
                       key={sc.cafe.id}
                       className={`relative flex items-center gap-2.5 rounded-xl border p-2 text-right transition ${
                         isCurrent
-                          ? "border-primary bg-primary/15 shadow-glow"
-                          : "border-border/60 bg-card/50 hover:border-primary/40 hover:bg-card/90"
+                          ? "border-primary bg-primary/15 shadow-sm font-bold"
+                          : "border-border/40 bg-card/40 hover:border-primary/40 hover:bg-card/70"
                       }`}
                     >
                       <button
@@ -1296,7 +1316,7 @@ function CalculatorSection({
                           </span>
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="font-medium text-xs text-foreground truncate">{sc.cafe.name}</div>
+                          <div className="font-medium text-xs text-foreground truncate" dir="auto">{sc.cafe.name}</div>
                           <div className="text-[10px] text-muted-foreground truncate">{AREA_CLASS_LABELS[sc.cafe.area_class] ?? sc.cafe.area}</div>
                           <div className="mt-0.5 flex items-center justify-between text-[10px]">
                             <span className="text-primary font-medium">{sc.cafe.price_level === 1 ? "اقتصادي $" : sc.cafe.price_level === 3 ? "مرتفع $$$" : sc.cafe.price_level === 4 ? "فاخر $$$$" : "متوسط $$"}</span>
@@ -1362,7 +1382,7 @@ function CalculatorSection({
             <div className="flex items-center justify-between border-b border-border/60 pb-3 sm:pb-4">
               <div className="min-w-0 pr-2">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-display text-xl sm:text-2xl font-bold truncate">{activeCafe.name} — المنيو</h3>
+                  <h3 className="font-display text-xl sm:text-2xl font-bold truncate" dir="auto">{activeCafe.name} — المنيو</h3>
                   <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${activeVerification.badgeClass}`}>
                     {activeVerification.statusLabel}
                   </span>
