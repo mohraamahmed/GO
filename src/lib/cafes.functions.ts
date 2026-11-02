@@ -6,9 +6,18 @@ import { moodScore, EMPTY_ATTRS, type AttrInput, type MoodKey } from "@/lib/mood
 export type CafeRow = Database["public"]["Tables"]["cafes"]["Row"];
 export type CafePhoto = { url: string | null; by: string[] };
 
+const DEFAULT_SUPABASE_URL = "https://c--1301ac32-49dd-4327-b443-c12ce8223ab8-prod.lovable.cloud";
+const DEFAULT_SUPABASE_KEY = "sb_publishable_8SG4MA-eCYnXU8tmjHQbmg_r5ScyDwB";
+
 function publicClient() {
-  const key = process.env["SUPABASE_PUBLISHABLE_KEY"]!;
-  return createClient<Database>(process.env["SUPABASE_URL"]!, key, {
+  const url =
+    (typeof process !== "undefined" && process.env && (process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"])) ||
+    DEFAULT_SUPABASE_URL;
+  const key =
+    (typeof process !== "undefined" && process.env && (process.env["SUPABASE_PUBLISHABLE_KEY"] || process.env["VITE_SUPABASE_PUBLISHABLE_KEY"])) ||
+    DEFAULT_SUPABASE_KEY;
+
+  return createClient<Database>(url, key, {
     auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
     global: {
       fetch: (input, init) => {
