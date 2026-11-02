@@ -26,10 +26,11 @@ import {
 } from "@/lib/user-storage";
 import { CafeComparisonModal } from "@/components/CafeComparisonModal";
 import { FavoritesDrawer } from "@/components/FavoritesDrawer";
-import heroImg from "@/assets/hero-cafe.png";
-import coffee from "@/assets/coffee.jpg";
-import outdoor from "@/assets/outdoor.jpg";
-import work from "@/assets/work.jpg";
+import { SmartImage, ThumbImage } from "@/components/SmartImage";
+import heroImg from "@/assets/hero-cafe.webp";
+import coffee from "@/assets/coffee.webp";
+import outdoor from "@/assets/outdoor.webp";
+import work from "@/assets/work.webp";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -326,16 +327,17 @@ function Index() {
   );
 }
 
-function CafeCard({ c, reason }: { c: CafeListItem; reason?: string | undefined }) {
+function CafeCard({ c, reason, priority = false }: { c: CafeListItem; reason?: string | undefined; priority?: boolean }) {
   const photo = (c.photos as CafePhoto[])[0];
   return (
     <Link to="/cafes/$slug" params={{ slug: c.slug }} className="cafe-card group block">
       <div className="cafe-media">
-        {photo?.url ? (
-          <img src={photo.url} alt={c.name} loading="lazy" decoding="async" referrerPolicy="no-referrer" />
-        ) : (
-          <div className="grid h-full place-items-center bg-muted text-muted-foreground"><Aperture className="h-10 w-10" /></div>
-        )}
+        <SmartImage
+          src={photo?.url}
+          alt={c.name}
+          priority={priority}
+          className="h-full w-full object-cover"
+        />
         <span className="cafe-media-shade" />
         {c.rating != null && (
           <span className="cafe-chip right-3"><Star className="h-3 w-3 fill-primary text-primary" />{Number(c.rating).toFixed(1)}</span>
@@ -1035,19 +1037,13 @@ function CalculatorSection({
           <div className="min-w-0 max-w-full rounded-3xl border border-border/50 bg-card/40 backdrop-blur-xl overflow-hidden shadow-2xl transition-all">
             {/* HERO COVER PHOTO */}
             <div className="relative h-48 sm:h-60 w-full overflow-hidden bg-muted group">
-              {activePhoto ? (
-                <img
-                  src={activePhoto}
-                  alt={activeCafe.name}
-                  referrerPolicy="no-referrer"
-                  className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                />
-              ) : (
-                <div className="grid h-full place-items-center text-muted-foreground/30">
-                  <Aperture className="h-12 w-12" />
-                </div>
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
+              <SmartImage
+                src={activePhoto}
+                alt={activeCafe.name}
+                priority={true}
+                className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent pointer-events-none" />
 
               {/* Floating Top Badges */}
               <div className="absolute top-3 inset-x-3 sm:inset-x-4 flex items-center justify-between">
@@ -1312,11 +1308,7 @@ function CalculatorSection({
                         className="flex flex-1 items-center gap-2.5 text-right min-w-0"
                       >
                         <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-muted">
-                          {photo ? (
-                            <img src={photo} alt={sc.cafe.name} referrerPolicy="no-referrer" className="h-full w-full object-cover" />
-                          ) : (
-                            <div className="grid h-full place-items-center text-muted-foreground"><Aperture className="h-4 w-4" /></div>
-                          )}
+                          <ThumbImage src={photo} alt={sc.cafe.name} />
                           <span className="absolute bottom-0 right-0 rounded bg-background/90 px-1 text-[8px] font-bold text-primary">
                             {sc.matchScore}%
                           </span>
@@ -1594,8 +1586,13 @@ function Explore({ mood, area }: { mood: number | null; area: AreaFilter }) {
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {list.slice(0, 12).map((c) => (
-            <CafeCard key={c.id} c={c} reason={"reasons" in c && c.reasons.length > 0 ? c.reasons.join("، و") : undefined} />
+          {list.slice(0, 12).map((c, idx) => (
+            <CafeCard
+              key={c.id}
+              c={c}
+              priority={idx < 4}
+              reason={"reasons" in c && c.reasons.length > 0 ? c.reasons.join("، و") : undefined}
+            />
           ))}
         </div>
       )}
@@ -1617,11 +1614,13 @@ function Explore({ mood, area }: { mood: number | null; area: AreaFilter }) {
       </div>
       {tonight && (
         <div key={tonight.id} className="tonight-pick flex items-center gap-4 rounded-2xl bg-background/50 p-3">
-          {(tonight.photos as CafePhoto[])[0]?.url ? (
-            <img src={(tonight.photos as CafePhoto[])[0]!.url!} alt={tonight.name} referrerPolicy="no-referrer" className="h-16 w-16 rounded-xl object-cover" />
-          ) : (
-            <div className="grid h-16 w-16 place-items-center rounded-xl bg-muted text-muted-foreground"><Aperture className="h-6 w-6" /></div>
-          )}
+          <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-muted">
+            <ThumbImage
+              src={(tonight.photos as CafePhoto[])[0]?.url}
+              alt={tonight.name}
+              className="h-16 w-16 rounded-xl object-cover"
+            />
+          </div>
           <div className="flex-1">
             <div className="font-latin text-lg font-semibold" dir="auto">{tonight.name}</div>
             <div className="text-xs text-muted-foreground">

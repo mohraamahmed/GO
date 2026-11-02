@@ -8,6 +8,7 @@ import { getCafeVerification, calculateBayesianRating } from "@/lib/ranking-and-
 import { isFavorite, toggleFavorite, isInCompareList, toggleCompareCafe, getCompareList } from "@/lib/user-storage";
 import { CafeComparisonModal } from "@/components/CafeComparisonModal";
 import { FavoritesDrawer } from "@/components/FavoritesDrawer";
+import { SmartImage } from "@/components/SmartImage";
 
 export const Route = createFileRoute("/cafes/")({
   head: () => ({
@@ -139,7 +140,7 @@ function CafesPage() {
         <p className="mt-6 text-sm text-muted-foreground">{list.length} نتيجة مطابقة</p>
 
         <div className="mt-3 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {list.slice(0, shown).map((c) => {
+          {list.slice(0, shown).map((c, idx) => {
             const photo = (c.photos as CafePhoto[])[0];
             const verification = getCafeVerification(c);
             const isFav = isFavorite(c.id);
@@ -149,11 +150,12 @@ function CafesPage() {
               <div key={c.id} className="glass group overflow-hidden rounded-2xl transition hover:shadow-glow border border-border/80 flex flex-col justify-between">
                 <div>
                   <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-                    {photo?.url ? (
-                      <img src={photo.url} alt={c.name} loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-                    ) : (
-                      <div className="grid h-full place-items-center text-muted-foreground"><Aperture className="h-10 w-10" /></div>
-                    )}
+                    <SmartImage
+                      src={photo?.url}
+                      alt={c.name}
+                      priority={idx < 6}
+                      className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                    />
                     <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
                       <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full backdrop-blur-md border ${verification.badgeClass}`}>
                         {verification.statusLabel}

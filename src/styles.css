@@ -309,3 +309,8 @@
 .tonight-card { display: flex; flex-direction: column; gap: 1.25rem; }
 .tonight-pick { animation: pickIn .5s cubic-bezier(.2,.8,.2,1); }
 @keyframes pickIn { from { opacity: 0; transform: translateY(10px) scale(.98); } }
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

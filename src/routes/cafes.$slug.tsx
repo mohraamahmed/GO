@@ -19,6 +19,7 @@ import {
 } from "@/lib/user-storage";
 import { CafeComparisonModal } from "@/components/CafeComparisonModal";
 import { FavoritesDrawer } from "@/components/FavoritesDrawer";
+import { SmartImage, ThumbImage } from "@/components/SmartImage";
 
 const cafeQuery = (slug: string) =>
   queryOptions({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }), staleTime: 5 * 60_000 });
@@ -311,14 +312,14 @@ function CafePage() {
         <section className="relative rounded-3xl overflow-hidden border border-border/50 bg-card/60 shadow-2xl backdrop-blur-md">
           {activePhoto ? (
             <div className="relative h-72 sm:h-96 md:h-[28rem] lg:h-[32rem] w-full overflow-hidden group">
-              <img
+              <SmartImage
                 src={activePhoto}
                 alt={c.name}
-                referrerPolicy="no-referrer"
+                priority={true}
                 className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
-              <div className="absolute inset-0 bg-gradient-to-r from-background/70 via-transparent to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-r from-background/70 via-transparent to-transparent pointer-events-none" />
 
               {/* Photo Attribution badge */}
               {photos[activePhotoIdx]?.by?.length ? (
@@ -338,7 +339,7 @@ function CafePage() {
                         activePhotoIdx === idx ? "border-primary scale-105 shadow-md" : "border-transparent opacity-60 hover:opacity-100"
                       }`}
                     >
-                      <img src={p.url} alt="" className="h-full w-full object-cover" />
+                      <ThumbImage src={p.url} alt="" className="h-full w-full object-cover" />
                     </button>
                   ))}
                 </div>
