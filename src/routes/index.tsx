@@ -984,16 +984,18 @@ function CalculatorSection({
           </div>
 
           {/* TOP MATCHED SUGGESTIONS TABS */}
-          <div className="space-y-1.5 min-w-0 max-w-full">
-            <div className="flex flex-wrap items-center justify-between gap-1">
-              <span className="block text-xs font-semibold text-primary">
-                🏆 وجدنا {scoredCafes.length} كافيه يناسب ميزانيتك ({budget} ج.م):
+          <div className="space-y-2 min-w-0 max-w-full">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                أفضل الكافيهات المقترحة لميزانيتك ({budget} ج.م):
               </span>
               <span className="text-[11px] text-muted-foreground">
-                {selectedArea === "sheikh_zayed" ? "في الشيخ زايد" : selectedArea === "tagamoa" ? "في التجمع الخامس" : "في كل المناطق"}
+                {selectedArea === "sheikh_zayed" ? "الشيخ زايد" : selectedArea === "tagamoa" ? "التجمع الخامس" : "القاهرة"}
               </span>
             </div>
-            <div className="flex gap-2 overflow-x-auto pb-1.5 pt-0.5 [scrollbar-width:none] touch-pan-x min-w-0 max-w-full">
+
+            <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] touch-pan-x min-w-0 max-w-full">
               {bestMatchedCafes.map((sc, idx) => {
                 const isSelected = sc.cafe.id === activeCafe.id;
                 return (
@@ -1001,327 +1003,251 @@ function CalculatorSection({
                     key={sc.cafe.id}
                     type="button"
                     onClick={() => setCafeId(sc.cafe.id)}
-                    className={`flex shrink-0 items-center gap-1.5 sm:gap-2 rounded-xl px-2.5 py-1.5 sm:px-3 sm:py-2 text-right text-xs transition ${
+                    className={`flex shrink-0 items-center gap-2 rounded-2xl px-3.5 py-2 text-right text-xs transition-all ${
                       isSelected
-                        ? "bg-primary text-primary-foreground shadow-glow font-medium"
-                        : "border border-border/80 bg-background/50 text-foreground hover:bg-primary/10"
+                        ? "bg-primary text-primary-foreground shadow-glow font-bold scale-[1.02]"
+                        : "border border-border/60 bg-card/60 text-muted-foreground hover:text-foreground hover:bg-card hover:border-border"
                     }`}
                   >
-                    <span className="grid h-5 w-5 place-items-center rounded-full bg-background/20 text-[10px] font-bold">
-                      #{idx + 1}
-                    </span>
-                    <span className="truncate max-w-[95px] sm:max-w-[120px]">{sc.cafe.name}</span>
-                    <span className="rounded bg-background/40 px-1 py-0.5 text-[9px] font-bold text-primary">
+                    <span className="text-[11px] opacity-70">#{idx + 1}</span>
+                    <span className="font-semibold truncate max-w-[110px] sm:max-w-[140px]">{sc.cafe.name}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isSelected ? "bg-black/20 text-white" : "bg-primary/10 text-primary"}`}>
                       {sc.matchScore}%
                     </span>
-                    {sc.cafe.rating != null && (
-                      <span className="text-[10px] opacity-90">★{Number(sc.cafe.rating).toFixed(1)}</span>
-                    )}
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* ACTIVE CAFE SPOTLIGHT CARD */}
-          <div className="min-w-0 max-w-full overflow-hidden rounded-2xl sm:rounded-3xl border border-border/80 bg-gradient-to-b from-card/90 to-background/95 p-3.5 sm:p-5 shadow-2xl backdrop-blur-xl">
-            {/* ALGORITHM MATCH BANNER */}
-            <div className="mb-4 rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/15 via-primary/5 to-transparent p-3 sm:p-3.5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2.5">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground font-display font-extrabold text-sm shadow-glow">
-                    {activeScoredCafe.matchScore}%
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-bold text-xs sm:text-sm text-primary">{activeScoredCafe.badge}</span>
-                      <span className={`text-[9px] font-medium px-2 py-0.5 rounded-full border ${activeVerification.badgeClass}`}>
-                        {activeVerification.statusLabel}
-                      </span>
-                    </div>
-                    <p className="text-[10px] sm:text-[11px] text-muted-foreground">
-                      المصدر: {activeVerification.source} · آخر مراجعة {activeVerification.lastUpdated}
-                    </p>
-                  </div>
+          {/* ACTIVE CAFE SPOTLIGHT CARD — CLEAN, AIRY, LUXURIOUS */}
+          <div className="min-w-0 max-w-full rounded-3xl border border-border/60 bg-card/40 backdrop-blur-xl overflow-hidden shadow-2xl transition-all">
+            {/* HERO COVER PHOTO */}
+            <div className="relative h-48 sm:h-60 w-full overflow-hidden bg-muted group">
+              {activePhoto ? (
+                <img
+                  src={activePhoto}
+                  alt={activeCafe.name}
+                  referrerPolicy="no-referrer"
+                  className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                />
+              ) : (
+                <div className="grid h-full place-items-center text-muted-foreground/30">
+                  <Aperture className="h-12 w-12" />
                 </div>
-                <div className="flex flex-wrap items-center gap-2.5 text-[11px]">
-                  <span className="text-muted-foreground">
-                    المتوقع للفرد: <strong className="text-foreground font-bold">{activeScoredCafe.expectedCost} ج.م</strong>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+
+              {/* Floating Top Badges */}
+              <div className="absolute top-3 inset-x-3 sm:inset-x-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-black/50 backdrop-blur-md px-3 py-1 text-xs font-bold text-amber-400 border border-white/10 shadow-sm">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    {activeScoredCafe.matchScore}% توافق ميزانية
                   </span>
-                  <span className="text-primary font-semibold">
-                    كفاءة الميزانية: {activeScoredCafe.budgetEfficiencyPct}%
+                  <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full border backdrop-blur-md ${activeVerification.badgeClass}`}>
+                    {activeVerification.statusLabel}
                   </span>
+                </div>
+
+                {/* Favorite & Compare Quick Icons */}
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => toggleFavorite(activeCafe.id)}
+                    className={`grid h-8 w-8 place-items-center rounded-full bg-black/40 backdrop-blur-md border border-white/10 transition ${
+                      isCurrentFav ? "text-rose-400" : "text-white/80 hover:text-rose-400"
+                    }`}
+                    title={isCurrentFav ? "في المفضلة" : "أضف للمفضلة"}
+                  >
+                    <Heart className={`h-4 w-4 ${isCurrentFav ? "fill-rose-500 text-rose-500" : ""}`} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => toggleCompareCafe(activeCafe.id)}
+                    className={`grid h-8 w-8 place-items-center rounded-full bg-black/40 backdrop-blur-md border border-white/10 transition ${
+                      isCurrentInCompare ? "text-primary" : "text-white/80 hover:text-primary"
+                    }`}
+                    title={isCurrentInCompare ? "في المقارنة" : "مقارنة"}
+                  >
+                    <GitCompareArrows className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
 
-              {/* Explain Why: AI Analysis */}
-              <div className="mt-2.5 rounded-xl bg-background/60 p-2 text-[11px] sm:text-xs text-foreground/90 border border-border/50">
-                <span className="font-bold text-primary">💡 تحليل الخوارزمية: </span>
-                {activeScoredCafe.reason}
-              </div>
-            </div>
+              {/* Cafe Name & Basic Info at Bottom of Photo */}
+              <div className="absolute bottom-3 inset-x-3 sm:inset-x-4">
+                <Link
+                  to="/cafes/$slug"
+                  params={{ slug: activeCafe.slug }}
+                  className="font-display text-2xl sm:text-3xl font-black text-foreground drop-shadow-md hover:text-primary transition-colors block leading-snug"
+                >
+                  {activeCafe.name}
+                </Link>
 
-            {/* Header: Photo + Info + Favorites/Compare Buttons */}
-            <div className="flex items-start justify-between gap-3 sm:gap-4">
-              <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
-                <div className="relative h-20 w-20 sm:h-24 sm:w-24 shrink-0 overflow-hidden rounded-xl sm:rounded-2xl bg-muted shadow-md">
-                  {activePhoto ? (
-                    <img src={activePhoto} alt={activeCafe.name} referrerPolicy="no-referrer" className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="grid h-full place-items-center text-muted-foreground"><Aperture className="h-7 w-7" /></div>
-                  )}
+                <div className="mt-1 flex flex-wrap items-center gap-2.5 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1 text-foreground/90">
+                    <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <span>{AREA_CLASS_LABELS[activeCafe.area_class] ?? activeCafe.area}</span>
+                  </span>
+
                   {activeCafe.rating != null && (
-                    <span className="absolute bottom-1 right-1 flex items-center gap-0.5 rounded-md bg-background/80 px-1 py-0.5 text-[9px] sm:text-[10px] font-bold text-primary">
-                      <Star className="h-2.5 w-2.5 fill-primary" />{Number(activeCafe.rating).toFixed(1)}
+                    <span className="flex items-center gap-1 bg-black/40 backdrop-blur-md px-2 py-0.5 rounded-full text-amber-400 font-bold border border-white/10">
+                      <Star className="h-3 w-3 fill-current" /> {Number(activeCafe.rating).toFixed(1)}
                     </span>
                   )}
-                </div>
 
-                <div className="min-w-0 flex-1 space-y-1">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <Link
-                      to="/cafes/$slug"
-                      params={{ slug: activeCafe.slug }}
-                      className="font-latin text-lg sm:text-2xl font-bold leading-tight truncate hover:text-primary transition"
-                      dir="auto"
-                    >
-                      {activeCafe.name}
-                    </Link>
-                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] sm:text-[11px] font-medium text-primary shrink-0">
-                      {activeCafe.price_level === 1 ? "اقتصادي ($)" : activeCafe.price_level === 3 ? "مرتفع ($$$)" : activeCafe.price_level === 4 ? "فاخر ($$$$)" : "متوسط ($$)"}
-                    </span>
-                  </div>
-                  <p className="flex items-center gap-1 text-[11px] sm:text-xs text-muted-foreground truncate">
-                    <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-primary shrink-0" />
-                    <span className="truncate">{activeCafe.address ?? (AREA_CLASS_LABELS[activeCafe.area_class] ?? activeCafe.area)}</span>
-                  </p>
-                  <p className="text-[11px] text-primary flex items-center gap-1">
-                    <Star className="h-3 w-3 fill-current" /> التقييم البيزي: ★{activeScoredCafe.bayesianRating.toFixed(2)} ({activeCafe.rating_count} تقييم)
-                  </p>
-                  {activeCafe.services.length > 0 && (
-                    <div className="flex flex-wrap gap-1 pt-0.5">
-                      {activeCafe.services.slice(0, 3).map((s) => (
-                        <span key={s} className="rounded-md bg-background/60 px-1.5 py-0.5 text-[9px] sm:text-[10px] text-muted-foreground">
-                          {s}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  <span className="text-muted-foreground/80">
+                    {activeCafe.price_level === 1 ? "اقتصادي ($)" : activeCafe.price_level === 3 ? "مرتفع ($$$)" : activeCafe.price_level === 4 ? "فاخر ($$$$)" : "متوسط ($$)"}
+                  </span>
                 </div>
-              </div>
-
-              {/* Favorite & Compare Quick Controls */}
-              <div className="flex items-center gap-1.5 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => toggleFavorite(activeCafe.id)}
-                  className={`grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-xl border transition ${
-                    isCurrentFav
-                      ? "bg-rose-500/15 border-rose-500/40 text-rose-400"
-                      : "border-border/80 bg-background/50 hover:bg-rose-500/10 text-muted-foreground hover:text-rose-400"
-                  }`}
-                  title={isCurrentFav ? "إزالة من المفضلة" : "إضافة للمفضلة"}
-                >
-                  <Heart className={`h-4 w-4 ${isCurrentFav ? "fill-rose-500 text-rose-500" : ""}`} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => toggleCompareCafe(activeCafe.id)}
-                  className={`grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-xl border transition ${
-                    isCurrentInCompare
-                      ? "bg-primary/20 border-primary text-primary"
-                      : "border-border/80 bg-background/50 hover:bg-primary/10 text-muted-foreground hover:text-foreground"
-                  }`}
-                  title={isCurrentInCompare ? "إزالة من المقارنة" : "مقارنة هذا الكافيه"}
-                >
-                  <GitCompareArrows className="h-4 w-4" />
-                </button>
               </div>
             </div>
 
-            {/* WHAT YOU CAN GET WITH THIS BUDGET */}
-            <div className="mt-4 rounded-xl sm:rounded-2xl border border-primary/25 bg-primary/5 p-3 sm:p-4">
-              <div className="flex items-center justify-between gap-1">
-                <span className="flex items-center gap-1 text-xs font-bold text-primary">
-                  <Coffee className="h-3.5 w-3.5 shrink-0" /> تقدر تطلب إيه بميزانيتك ({budget} ج.م)؟
-                </span>
-                <span className="text-[11px] text-muted-foreground shrink-0">
-                  {people > 1 ? `لـ ${people} أشخاص` : "لشخص واحد"}
-                </span>
-              </div>
-
-              <div className="mt-2.5 space-y-1.5">
-                {smartRecommendation.items.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between gap-2 rounded-xl bg-background/60 px-2.5 py-2 text-xs">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="grid h-5 w-5 sm:h-6 sm:w-6 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-                        <Check className="h-3 w-3" />
-                      </span>
-                      <div className="min-w-0">
-                        <span className="font-medium text-foreground truncate block">{item.name}</span>
-                        {item.desc && <p className="text-[10px] text-muted-foreground truncate">{item.desc}</p>}
-                      </div>
-                    </div>
-                    <span className="font-display font-bold text-primary shrink-0">{item.price} ج.م</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Bill Details with Egyptian Service and VAT */}
-              <div className="mt-3 space-y-1 border-t border-border/60 pt-2 text-xs">
-                <div className="flex justify-between text-muted-foreground text-[11px]">
-                  <span>الأصناف الأساسية: {smartRecommendation.singlePersonSubtotal * people} ج.م</span>
-                  {hasServiceCharge && <span>+خدمة (12%): {smartRecommendation.billFees.serviceAmount * people} ج.م</span>}
-                  {hasVat && <span>+ضريبة (14%): {smartRecommendation.billFees.vatAmount * people} ج.م</span>}
+            {/* CARD BODY CONTENT */}
+            <div className="p-4 sm:p-6 space-y-4">
+              {/* CLEAN FINANCIAL SUMMARY ROW */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                <div className="rounded-2xl bg-secondary/30 border border-border/40 p-3 text-center sm:text-right">
+                  <span className="text-[11px] text-muted-foreground block">المتوقع للفرد</span>
+                  <span className="font-display text-lg font-bold text-foreground">
+                    ~{activeScoredCafe.expectedCost} <span className="text-xs font-normal text-muted-foreground">ج.م</span>
+                  </span>
                 </div>
-                {transportationBudget > 0 && (
-                  <div className="flex justify-between text-muted-foreground text-[11px]">
-                    <span>مواصلات أوبر / بنزين:</span>
-                    <span>+{transportationBudget} ج.م</span>
-                  </div>
-                )}
-                <div className="flex justify-between items-center text-xs font-bold pt-1 border-t border-border/40">
-                  <span className="text-foreground">الإجمالي التقريبي للخروجة:</span>
-                  <span className="text-primary text-sm">{smartRecommendation.outingTotalWithTransport} ج.م</span>
+
+                <div className="rounded-2xl bg-secondary/30 border border-border/40 p-3 text-center sm:text-right">
+                  <span className="text-[11px] text-muted-foreground block">الإجمالي بالخدمة والضريبة</span>
+                  <span className="font-display text-lg font-bold text-primary">
+                    {smartRecommendation.outingTotalWithTransport} <span className="text-xs font-normal text-muted-foreground">ج.م</span>
+                  </span>
                 </div>
-                <div className="flex justify-between items-center text-[11px]">
-                  <span className="text-muted-foreground">متوسط الفرد: {Math.round(smartRecommendation.outingTotalWithTransport / people)} ج.م</span>
-                  <span className={`font-semibold ${smartRecommendation.isWithinBudget ? "text-emerald-400" : "text-destructive"}`}>
+
+                <div className="col-span-2 sm:col-span-1 rounded-2xl bg-secondary/30 border border-border/40 p-3 flex flex-col justify-center text-center sm:text-right">
+                  <span className="text-[11px] text-muted-foreground block">حالة الميزانية</span>
+                  <span className={`text-xs font-bold ${smartRecommendation.isWithinBudget ? "text-emerald-400" : "text-amber-400"}`}>
                     {smartRecommendation.isWithinBudget
-                      ? `داخل ميزانيتك ✓ ومتبقي ${smartRecommendation.remainingBudget} ج.م`
-                      : `أعلى من ميزانيتك بـ ${Math.abs(smartRecommendation.remainingBudget)} ج.م`}
+                      ? `✓ وفرت ${smartRecommendation.remainingBudget} ج.م`
+                      : `أعلى بـ ${Math.abs(smartRecommendation.remainingBudget)} ج.م`}
                   </span>
                 </div>
               </div>
-            </div>
 
-            {/* ACTION BUTTON: VIEW FULL MENU */}
-            <div className="mt-3.5 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setShowFullMenu(true)}
-                className="bg-gold flex flex-1 items-center justify-center gap-1.5 rounded-xl sm:rounded-2xl py-2.5 sm:py-3 text-center font-display text-xs sm:text-sm font-bold text-primary-foreground shadow-glow transition hover:scale-[1.01]"
-              >
-                <span>تصفح المنيو كامل بالأسعار والطلب المخصص</span>
-                <ChevronLeft className="h-4 w-4 shrink-0" />
-              </button>
-              <Link
-                to="/cafes/$slug"
-                params={{ slug: activeCafe.slug }}
-                className="glass rounded-xl sm:rounded-2xl px-4 flex items-center justify-center text-xs font-bold hover:bg-primary/10 transition"
-              >
-                صفحة الكافيه
-              </Link>
-            </div>
-
-            {/* SOCIAL AND CONTACT LINKS (مواقع تواصل الكافيه) */}
-            <div className="mt-4 border-t border-border/60 pt-3 sm:pt-4">
-              <span className="mb-2 block text-xs font-semibold text-muted-foreground">
-                التواصل وموقع كافيه {activeCafe.name}:
-              </span>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {/* 1. Google Maps */}
-                <a
-                  href={activeCafe.maps_url || `https://maps.google.com/?q=${encodeURIComponent(activeCafe.name + " " + activeCafe.area)}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex min-w-0 items-center justify-center gap-1 rounded-xl border border-border/80 bg-background/50 p-2 sm:px-3 sm:py-2 text-center text-[11px] sm:text-xs font-medium text-foreground transition hover:border-primary hover:text-primary"
-                >
-                  <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
-                  <span className="truncate">خرائط جوجل</span>
-                  <ExternalLink className="h-3 w-3 opacity-60 shrink-0" />
-                </a>
-
-                {/* 2. Direct Phone */}
-                {activeCafe.phone ? (
-                  <a
-                    href={`tel:${activeCafe.phone}`}
-                    className="flex min-w-0 items-center justify-center gap-1 rounded-xl border border-border/80 bg-background/50 p-2 sm:px-3 sm:py-2 text-center text-[11px] sm:text-xs font-medium text-foreground transition hover:border-primary hover:text-primary"
-                    dir="ltr"
-                  >
-                    <Phone className="h-3.5 w-3.5 text-primary shrink-0" />
-                    <span className="truncate">{activeCafe.phone}</span>
-                  </a>
-                ) : (
-                  <span className="flex min-w-0 items-center justify-center gap-1 rounded-xl border border-border/40 bg-background/20 p-2 sm:px-3 sm:py-2 text-center text-[10px] sm:text-[11px] text-muted-foreground/60">
-                    <Phone className="h-3.5 w-3.5 opacity-40 shrink-0" /> <span className="truncate">لا يوجد هاتف</span>
+              {/* PROPOSED ORDER (WHAT TO GET) */}
+              <div className="rounded-2xl border border-border/40 bg-card/50 p-3.5 space-y-2">
+                <div className="flex items-center justify-between text-xs font-semibold text-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <Coffee className="h-4 w-4 text-primary" />
+                    طلب مقترح يناسب ميزانيتك ({people > 1 ? `${people} أفراد` : "فرد واحد"}):
                   </span>
-                )}
-
-                {/* 3. Website / Google search */}
-                {activeCafe.website ? (
-                  <a
-                    href={activeCafe.website}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex min-w-0 items-center justify-center gap-1 rounded-xl border border-border/80 bg-background/50 p-2 sm:px-3 sm:py-2 text-center text-[11px] sm:text-xs font-medium text-foreground transition hover:border-primary hover:text-primary"
-                  >
-                    <Globe className="h-3.5 w-3.5 text-primary shrink-0" />
-                    <span className="truncate">الموقع الرسمي</span>
-                    <ExternalLink className="h-3 w-3 opacity-60 shrink-0" />
-                  </a>
-                ) : (
-                  <a
-                    href={`https://www.google.com/search?q=${encodeURIComponent(activeCafe.name + " كافيه " + activeCafe.area)}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex min-w-0 items-center justify-center gap-1 rounded-xl border border-border/80 bg-background/50 p-2 sm:px-3 sm:py-2 text-center text-[11px] sm:text-xs font-medium text-foreground transition hover:border-primary hover:text-primary"
-                  >
-                    <Globe className="h-3.5 w-3.5 text-primary shrink-0" />
-                    <span className="truncate">بحث جوجل</span>
-                  </a>
-                )}
-
-                {/* 4. WhatsApp Share */}
-                <a
-                  href={`https://wa.me/?text=${whatsappMessage}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex min-w-0 items-center justify-center gap-1 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-2 sm:px-3 sm:py-2 text-center text-[11px] sm:text-xs font-medium text-emerald-400 transition hover:bg-emerald-500/20"
-                >
-                  <MessageCircle className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                  <span className="truncate">مشاركة الخطة</span>
-                </a>
-              </div>
-            </div>
-
-            {/* SMART ALTERNATIVES (إذا كان خارج الميزانية أو لخيارات أخرى) */}
-            {smartAlternatives.length > 0 && (
-              <div className="mt-5 rounded-2xl border border-primary/20 bg-background/50 p-3 sm:p-4 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                    <Sparkles className="h-4 w-4 text-primary" /> كافيهات بديلة تناسب ميزانيتك في نفس المنطقة:
-                  </span>
+                  <span className="text-[11px] text-muted-foreground">شامل الضريبة والخدمة</span>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-3">
-                  {smartAlternatives.map(({ cafe: altCafe, score, rationale }) => (
-                    <div key={altCafe.id} className="rounded-xl border border-border/70 bg-card/60 p-2.5 flex flex-col justify-between">
-                      <div>
-                        <div className="flex justify-between items-center text-[10px] mb-1">
-                          <span className="text-primary font-bold">توافق {score.matchScore}%</span>
-                          <span className="text-muted-foreground flex items-center gap-0.5">
-                            <Star className="h-2.5 w-2.5 fill-primary text-primary" />★{score.bayesianRating.toFixed(1)}
-                          </span>
-                        </div>
-                        <h5 className="font-bold text-xs truncate">{altCafe.name}</h5>
-                        <p className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5">{rationale}</p>
+
+                <div className="space-y-1.5">
+                  {smartRecommendation.items.slice(0, 2).map((item) => (
+                    <div key={item.id} className="flex items-center justify-between text-xs py-1 px-2.5 rounded-xl bg-background/50">
+                      <div className="flex items-center gap-2 truncate">
+                        <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                        <span className="font-medium text-foreground truncate">{item.name}</span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCafeId(altCafe.id);
-                          calcRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-                        }}
-                        className="mt-2 text-center rounded-lg bg-primary/10 hover:bg-primary/20 text-primary py-1 text-[11px] font-bold transition"
-                      >
-                        اختر هذا البديل
-                      </button>
+                      <span className="font-bold text-foreground shrink-0">{item.price} ج.م</span>
                     </div>
                   ))}
                 </div>
               </div>
-            )}
+
+              {/* PRIMARY ACTION BUTTONS */}
+              <div className="space-y-2 pt-1">
+                <Link
+                  to="/cafes/$slug"
+                  params={{ slug: activeCafe.slug }}
+                  className="bg-gold flex items-center justify-center gap-2 rounded-2xl py-3 px-4 font-display text-sm font-bold text-primary-foreground shadow-glow transition hover:opacity-95"
+                >
+                  <span>استكشف الكافيه والمنيو الكامل</span>
+                  <ChevronLeft className="h-4 w-4 shrink-0" />
+                </Link>
+
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowFullMenu(true)}
+                    className="flex-1 rounded-xl border border-border/60 bg-secondary/30 hover:bg-secondary/60 py-2 px-3 text-center text-xs font-semibold text-muted-foreground hover:text-foreground transition"
+                  >
+                    تخصيص الفاتورة
+                  </button>
+
+                  <a
+                    href={activeCafe.maps_url || `https://maps.google.com/?q=${encodeURIComponent(activeCafe.name + " " + activeCafe.area)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-secondary/30 hover:bg-secondary/60 py-2 px-3 text-xs font-semibold text-muted-foreground hover:text-primary transition"
+                  >
+                    <MapPin className="h-3.5 w-3.5 text-primary" />
+                    <span>الخريطة</span>
+                  </a>
+
+                  {activeCafe.phone && (
+                    <a
+                      href={`tel:${activeCafe.phone}`}
+                      className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-secondary/30 hover:bg-secondary/60 py-2 px-3 text-xs font-semibold text-muted-foreground hover:text-foreground transition"
+                      dir="ltr"
+                    >
+                      <Phone className="h-3.5 w-3.5 text-primary" />
+                      <span>اتصال</span>
+                    </a>
+                  )}
+
+                  <a
+                    href={`https://wa.me/?text=${whatsappMessage}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 py-2 px-3 text-xs font-semibold text-emerald-400 transition"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    <span>مشاركة</span>
+                  </a>
+                </div>
+              </div>
+            </div>
           </div>
+
+          {/* SMART ALTERNATIVES (CLEAN & OUTSIDE THE MAIN CARD) */}
+          {smartAlternatives.length > 0 && (
+            <div className="space-y-2.5 pt-2">
+              <span className="text-xs font-bold text-muted-foreground flex items-center gap-1.5 px-1">
+                <Sparkles className="h-3.5 w-3.5 text-primary" /> بدائل مقترحة أخرى في نفس المنطقة:
+              </span>
+              <div className="grid gap-2.5 sm:grid-cols-3">
+                {smartAlternatives.map(({ cafe: altCafe, score, rationale }) => (
+                  <button
+                    key={altCafe.id}
+                    type="button"
+                    onClick={() => {
+                      setCafeId(altCafe.id);
+                      calcRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }}
+                    className="rounded-2xl border border-border/50 bg-card/40 hover:bg-card/80 hover:border-primary/40 p-3 text-right transition-all flex flex-col justify-between group"
+                  >
+                    <div>
+                      <div className="flex justify-between items-center text-[10px] mb-1">
+                        <span className="text-primary font-bold">{score.matchScore}% توافق</span>
+                        <span className="text-amber-400 flex items-center gap-0.5">
+                          <Star className="h-2.5 w-2.5 fill-current" />★{score.bayesianRating.toFixed(1)}
+                        </span>
+                      </div>
+                      <h5 className="font-bold text-xs text-foreground group-hover:text-primary transition-colors truncate">
+                        {altCafe.name}
+                      </h5>
+                      <p className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">{rationale}</p>
+                    </div>
+                    <span className="mt-2 text-center text-[11px] font-bold text-primary group-hover:underline">
+                      اختر هذا البديل ←
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* MORE MATCHING CAFES GRID */}
           {scoredCafes.length > 1 && (
