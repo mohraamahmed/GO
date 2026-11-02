@@ -37,11 +37,16 @@ export const Route = createFileRoute("/cafes/$slug")({
       meta: [
         { title },
         { name: "description", content: desc },
+        { name: "theme-color", content: "#1a0f0a" },
         { property: "og:title", content: title },
         { property: "og:description", content: desc },
         { property: "og:type", content: "website" },
+        { property: "og:site_name", content: "CaféLens" },
+        { property: "og:image", content: photo || "https://cafe-lens1.vercel.app/og-image.jpg" },
+        { property: "og:image:width", content: "1200" },
+        { property: "og:image:height", content: "630" },
         { name: "twitter:card", content: "summary_large_image" },
-        ...(photo ? [{ property: "og:image", content: photo }, { name: "twitter:image", content: photo }] : []),
+        { name: "twitter:image", content: photo || "https://cafe-lens1.vercel.app/og-image.jpg" },
       ],
     };
   },
