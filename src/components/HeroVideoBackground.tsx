@@ -195,7 +195,7 @@ export function HeroVideoBackground({
         fetchPriority="high"
         decoding="async"
         onLoad={() => setPosterLoaded(true)}
-        className={`absolute inset-0 h-full w-full object-cover object-[center_32%] transition-opacity duration-1000 ease-out will-change-[opacity] ${
+        className={`absolute inset-0 h-full w-full object-cover object-[center_42%] transition-opacity duration-1000 ease-out will-change-[opacity] ${
           posterLoaded ? "opacity-100" : "opacity-90"
         }`}
       />
@@ -211,7 +211,7 @@ export function HeroVideoBackground({
           preload="auto"
           poster={posterSrc}
           onPlaying={() => setIsVideoPlaying(true)}
-          className={`absolute inset-0 h-full w-full object-cover object-[center_32%] transition-opacity duration-700 ease-out will-change-[opacity] ${
+          className={`absolute inset-0 h-full w-full object-cover object-[center_42%] transition-opacity duration-700 ease-out will-change-[opacity] ${
             isVideoPlaying ? "opacity-100" : "opacity-0"
           }`}
         >
