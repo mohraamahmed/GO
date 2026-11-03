@@ -164,8 +164,7 @@ function Index() {
         .from(".nav-item", { y: -20, opacity: 0, stagger: 0.08, duration: 0.5, clearProps: "all" }, "-=0.4")
         .from(".hero-line", { y: 40, opacity: 0, stagger: 0.1, duration: 0.7, clearProps: "all" }, "-=0.4")
         .from(".hero-sub", { y: 20, opacity: 0, duration: 0.6, clearProps: "all" }, "-=0.3")
-        .from(".hero-rule", { scaleX: 0, transformOrigin: "right", duration: 0.6, clearProps: "all" }, "-=0.3")
-        .from(".hero-loc", { y: 20, opacity: 0, duration: 0.5, clearProps: "all" }, "-=0.2");
+        .from(".hero-rule", { scaleX: 0, transformOrigin: "right", duration: 0.6, clearProps: "all" }, "-=0.3");
       gsap.to(".hero-text", {
         yPercent: -30, opacity: 0.2, ease: "none",
         scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: true },
@@ -243,9 +242,6 @@ function Index() {
             </div>
           </div>
           <div className="flex gap-3">
-            <Link to="/cafes" className="nav-item glass flex h-12 items-center gap-2 rounded-full px-5 transition hover:shadow-glow">
-              <Compass className="h-5 w-5" /> <span>كل الكافيهات</span>
-            </Link>
             <NavMenu
               onOpenCompare={() => setIsCompareOpen(true)}
               onOpenFavorites={() => setIsFavoritesOpen(true)}
@@ -260,17 +256,10 @@ function Index() {
           </h1>
           <p className="hero-sub mt-4 max-w-sm text-lg text-muted-foreground md:text-xl">واعرف ميزانيتك، واستمتع بخروجة على مزاجك.</p>
           <div className="hero-rule bg-gold mt-6 h-px w-40" />
-          <label id="areas" className="hero-loc glass relative mt-6 inline-flex items-center gap-3 rounded-full px-5 py-3 transition hover:shadow-glow">
-            <MapPin className="h-5 w-5 text-primary" />
-            <select aria-label="المنطقة" value={area} onChange={(e) => setArea(e.target.value as AreaFilter)} className="appearance-none bg-transparent pl-6 text-foreground outline-none">
-              {AREA_OPTIONS.map((a) => <option key={a.value} value={a.value} className="bg-background">{a.label}</option>)}
-            </select>
-            <ChevronDown className="pointer-events-none absolute left-5 h-4 w-4" />
-          </label>
         </div>
       </section>
 
-      <main className="relative z-10 mx-auto -mt-40 w-full max-w-6xl space-y-12 sm:space-y-14 px-3 sm:px-5 pb-10">
+      <main id="areas" className="relative z-10 mx-auto -mt-40 w-full max-w-6xl space-y-12 sm:space-y-14 px-3 sm:px-5 pb-10">
         {/* MOODS */}
         <section className="reveal mood-picker relative overflow-hidden" aria-label="اختر مزاجك">
           <div className="mood-content relative">
