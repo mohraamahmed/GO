@@ -10,7 +10,7 @@ import {
   Search, Phone, Globe, ExternalLink, Share2, Coffee, Utensils, Check, MessageCircle,
   Wifi, Zap, Car, Wind, VolumeX, BadgeCheck, CheckCircle2,
 } from "lucide-react";
-import { WaterHero } from "@/components/WaterHero";
+import { HeroVideoBackground } from "@/components/HeroVideoBackground";
 import { Button } from "@/components/ui/button";
 import { cafesQuery, moodQuery, menuQuery } from "@/lib/queries";
 import { AREA_CLASS_LABELS, type CafeListItem, type CafePhoto, type MoodResult } from "@/lib/cafes.functions";
@@ -34,6 +34,9 @@ import work from "@/assets/work.webp";
 
 export const Route = createFileRoute("/")({
   head: () => ({
+    links: [
+      { rel: "preload", as: "image", href: "/hero-poster.webp", fetchPriority: "high" },
+    ],
     meta: [
       { title: "CaféLens — اكتشف كافيهك المثالي في القاهرة" },
       { name: "description", content: "اكتشف مكانك المثالي، اعرف ميزانيتك، واستمتع بخروجة على مزاجك في القاهرة." },
@@ -156,8 +159,8 @@ function Index() {
     gsap.registerPlugin(ScrollTrigger);
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-      tl.from(".hero-canvas", { scale: 1.15, opacity: 0, duration: 2 })
-        .from(".nav-item", { y: -30, opacity: 0, stagger: 0.1, duration: 0.8 }, "-=1.5")
+      tl.from(".hero-canvas", { opacity: 0, duration: 1.4 })
+        .from(".nav-item", { y: -30, opacity: 0, stagger: 0.1, duration: 0.8 }, "-=1.0")
         .from(".hero-line", { y: 80, opacity: 0, skewY: 6, stagger: 0.15, duration: 1 }, "-=1.1")
         .from(".hero-sub", { y: 20, opacity: 0, duration: 0.8 }, "-=0.6")
         .from(".hero-rule", { scaleX: 0, transformOrigin: "right", duration: 0.8 }, "-=0.5")
@@ -221,12 +224,11 @@ function Index() {
       {/* HERO */}
       <section className="hero relative h-[100svh] min-h-[640px]">
         <div className="hero-canvas absolute inset-0">
-          <img
-            src={heroImg}
-            alt="مقهى دائري فاخر عند الغروب"
-            className="absolute inset-0 h-full w-full object-cover"
+          <HeroVideoBackground
+            posterSrc={heroImg}
+            videoMp4Src="/hero-video.mp4"
+            videoWebmSrc="/hero-video.webm"
           />
-          <WaterHero src={heroImg} />
         </div>
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-background/40 to-background/85" />
         <div className="bg-fade absolute inset-x-0 bottom-0 h-48" />
