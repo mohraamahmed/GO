@@ -28,7 +28,7 @@ export function HeroVideoBackground({
   const [useCanvasFallback, setUseCanvasFallback] = useState(false);
   const [posterLoaded, setPosterLoaded] = useState(false);
 
-  // 1. Video Autoplay Management
+  // 1. Video Autoplay Management — start loading & playing immediately
   useEffect(() => {
     const video = videoRef.current;
     if (!video || useCanvasFallback) return;
@@ -78,6 +78,13 @@ export function HeroVideoBackground({
       document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [useCanvasFallback]);
+
+  // Preload video directly on mount
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.load();
+    }
+  }, []);
 
   // 2. Canvas Sequence — forward loop only (no ping-pong = no zoom in/out)
   useEffect(() => {

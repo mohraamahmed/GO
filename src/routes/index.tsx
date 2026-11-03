@@ -36,6 +36,7 @@ export const Route = createFileRoute("/")({
   head: () => ({
     links: [
       { rel: "preload", as: "image", href: "/hero-poster.webp", fetchPriority: "high" },
+      { rel: "preload", as: "video", href: "/hero-video.mp4", type: "video/mp4" },
     ],
     meta: [
       { title: "CaféLens — اكتشف كافيهك المثالي في القاهرة" },
@@ -159,12 +160,12 @@ function Index() {
     gsap.registerPlugin(ScrollTrigger);
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-      tl.from(".hero-canvas", { opacity: 0, duration: 1.4 })
-        .from(".nav-item", { y: -30, opacity: 0, stagger: 0.1, duration: 0.8 }, "-=1.0")
-        .from(".hero-line", { y: 80, opacity: 0, skewY: 6, stagger: 0.15, duration: 1 }, "-=1.1")
-        .from(".hero-sub", { y: 20, opacity: 0, duration: 0.8 }, "-=0.6")
-        .from(".hero-rule", { scaleX: 0, transformOrigin: "right", duration: 0.8 }, "-=0.5")
-        .from(".hero-loc", { y: 20, opacity: 0, duration: 0.6 }, "-=0.4");
+      tl.from(".hero-canvas", { opacity: 0, duration: 0.6 })
+        .from(".nav-item", { y: -20, opacity: 0, stagger: 0.08, duration: 0.5, clearProps: "all" }, "-=0.4")
+        .from(".hero-line", { y: 40, opacity: 0, stagger: 0.1, duration: 0.7, clearProps: "all" }, "-=0.4")
+        .from(".hero-sub", { y: 20, opacity: 0, duration: 0.6, clearProps: "all" }, "-=0.3")
+        .from(".hero-rule", { scaleX: 0, transformOrigin: "right", duration: 0.6, clearProps: "all" }, "-=0.3")
+        .from(".hero-loc", { y: 20, opacity: 0, duration: 0.5, clearProps: "all" }, "-=0.2");
       gsap.to(".hero-text", {
         yPercent: -30, opacity: 0.2, ease: "none",
         scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: true },
