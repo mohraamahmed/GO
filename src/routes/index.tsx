@@ -226,7 +226,7 @@ function Index() {
       <section className="hero relative h-[100svh] min-h-[640px]">
         <div className="hero-canvas absolute inset-0">
           <HeroVideoBackground
-            posterSrc={heroImg}
+            posterSrc="/hero-poster.webp"
             videoMp4Src="/hero-video.mp4"
             videoWebmSrc="/hero-video.webm"
           />
