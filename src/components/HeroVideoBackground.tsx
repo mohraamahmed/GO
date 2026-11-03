@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface HeroVideoBackgroundProps {
   posterSrc?: string;
@@ -8,6 +8,9 @@ interface HeroVideoBackgroundProps {
   alt?: string;
   className?: string;
 }
+
+// Cache-bust version — updated every time the module loads to force fresh assets
+const CACHE_BUST = `?v=${Date.now()}`;
 
 export function HeroVideoBackground({
   posterSrc = "/hero-poster.webp",
@@ -25,7 +28,7 @@ export function HeroVideoBackground({
   const [useCanvasFallback, setUseCanvasFallback] = useState(false);
   const [posterLoaded, setPosterLoaded] = useState(false);
 
-  // 1. Video Autoplay Management & Error Handling
+  // 1. Video Autoplay Management
   useEffect(() => {
     const video = videoRef.current;
     if (!video || useCanvasFallback) return;
@@ -37,41 +40,29 @@ export function HeroVideoBackground({
         video.muted = true;
         video.defaultMuted = true;
         await video.play();
-        if (isMounted) {
-          setIsVideoPlaying(true);
-        }
+        if (isMounted) setIsVideoPlaying(true);
       } catch (err) {
-        console.warn("Video autoplay prevented or unsupported, activating smooth Canvas sequence fallback:", err);
-        if (isMounted) {
-          setUseCanvasFallback(true);
-        }
+        console.warn("Video autoplay prevented, activating Canvas fallback:", err);
+        if (isMounted) setUseCanvasFallback(true);
       }
     };
 
     attemptPlay();
 
-    // 2. IntersectionObserver: Pause when out of view to save 100% GPU/CPU for page scrolling
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (!entry) return;
         if (entry.isIntersecting) {
-          if (video.paused && !useCanvasFallback) {
-            video.play().catch(() => {});
-          }
+          if (video.paused && !useCanvasFallback) video.play().catch(() => {});
         } else {
-          if (!video.paused) {
-            video.pause();
-          }
+          if (!video.paused) video.pause();
         }
       },
       { threshold: 0.1 }
     );
 
-    if (containerRef.current) {
-      observer.observe(containerRef.current);
-    }
+    if (containerRef.current) observer.observe(containerRef.current);
 
-    // 3. Page Visibility: Pause when tab is hidden
     const handleVisibility = () => {
       if (document.hidden) {
         if (!video.paused) video.pause();
@@ -88,7 +79,7 @@ export function HeroVideoBackground({
     };
   }, [useCanvasFallback]);
 
-  // 4. Ultra-smooth Canvas Sequence Player (Fallback if video is blocked by Low Power Mode / Data Saver)
+  // 2. Canvas Sequence — forward loop only (no ping-pong = no zoom in/out)
   useEffect(() => {
     if (!useCanvasFallback) return;
 
@@ -99,52 +90,41 @@ export function HeroVideoBackground({
 
     let isMounted = true;
     let animId = 0;
-    const loadedImages: HTMLImageElement[] = [];
 
-    // Preload all 20 frames into memory
-    const loadPromises = Array.from({ length: framesCount }, (_, i) => {
-      return new Promise<HTMLImageElement>((resolve) => {
+    // Load frames with cache-bust to always get the latest files
+    const loadPromises = Array.from({ length: framesCount }, (_, i) =>
+      new Promise<HTMLImageElement>((resolve) => {
         const img = new Image();
-        img.src = `/hero-frames/frame_${String(i).padStart(5, "0")}.webp`;
+        img.src = `/hero-frames/frame_${String(i).padStart(5, "0")}.webp${CACHE_BUST}`;
         img.onload = () => resolve(img);
         img.onerror = () => resolve(img);
-      });
-    });
+      })
+    );
 
     Promise.all(loadPromises).then((imgs) => {
       if (!isMounted) return;
-      loadedImages.push(...imgs);
 
-      // Ping-pong sequence indices: 0..19..1
-      const pingPongSequence: number[] = [];
-      for (let i = 0; i < framesCount; i++) pingPongSequence.push(i);
-      for (let i = framesCount - 2; i > 0; i--) pingPongSequence.push(i);
-
-      const totalSteps = pingPongSequence.length;
-      const stepDuration = 83.33; // ~12 fps keyframe pacing with cross-fade interpolation
-      let startTime = performance.now();
+      const stepDuration = 120; // ~8 fps
+      const startTime = performance.now();
 
       const render = (now: number) => {
         animId = requestAnimationFrame(render);
-        if (document.hidden || loadedImages.length === 0) return;
+        if (document.hidden || imgs.length === 0) return;
 
-        const elapsed = (now - startTime) % (totalSteps * stepDuration);
+        const elapsed = (now - startTime) % (framesCount * stepDuration);
         const floatIndex = elapsed / stepDuration;
-        const currentIdx = Math.floor(floatIndex) % totalSteps;
-        const nextIdx = (currentIdx + 1) % totalSteps;
-        const blend = floatIndex - Math.floor(floatIndex); // 0.0 to 1.0 subframe interpolation
+        const currentIdx = Math.floor(floatIndex) % framesCount;
+        const nextIdx = (currentIdx + 1) % framesCount;
+        const blend = floatIndex - Math.floor(floatIndex);
 
-        const img1 = loadedImages[pingPongSequence[currentIdx]!];
-        const img2 = loadedImages[pingPongSequence[nextIdx]!];
+        const img1 = imgs[currentIdx]!;
+        const img2 = imgs[nextIdx]!;
+        if (!img1.complete || !img2.complete) return;
 
-        if (!img1 || !img2 || !img1.complete || !img2.complete) return;
-
-        // Cover sizing calculation
         const cw = cv.width;
         const ch = cv.height;
-        const iw = img1.naturalWidth || 720;
-        const ih = img1.naturalHeight || 1280;
-
+        const iw = img1.naturalWidth || 1280;
+        const ih = img1.naturalHeight || 720;
         const scale = Math.max(cw / iw, ch / ih);
         const sw = iw * scale;
         const sh = ih * scale;
@@ -153,7 +133,6 @@ export function HeroVideoBackground({
 
         ctx.globalAlpha = 1.0;
         ctx.drawImage(img1, sx, sy, sw, sh);
-
         if (blend > 0.01) {
           ctx.globalAlpha = blend;
           ctx.drawImage(img2, sx, sy, sw, sh);
@@ -161,7 +140,6 @@ export function HeroVideoBackground({
       };
 
       const handleResize = () => {
-        if (!cv) return;
         const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
         cv.width = Math.round((cv.clientWidth || window.innerWidth) * dpr);
         cv.height = Math.round((cv.clientHeight || window.innerHeight) * dpr);
@@ -171,9 +149,7 @@ export function HeroVideoBackground({
       window.addEventListener("resize", handleResize);
       animId = requestAnimationFrame(render);
 
-      return () => {
-        window.removeEventListener("resize", handleResize);
-      };
+      return () => window.removeEventListener("resize", handleResize);
     });
 
     return () => {
@@ -188,19 +164,19 @@ export function HeroVideoBackground({
       className={`hero-cinematic-bg absolute inset-0 overflow-hidden select-none pointer-events-none ${className}`}
       aria-hidden="true"
     >
-      {/* 1. Instant Static Poster (Zero CLS, Zero LCP delay) */}
+      {/* Poster — cache-busted */}
       <img
-        src={posterSrc}
+        src={`${posterSrc}${CACHE_BUST}`}
         alt={alt}
         fetchPriority="high"
         decoding="async"
         onLoad={() => setPosterLoaded(true)}
-        className={`absolute inset-0 h-full w-full object-cover object-[center_42%] transition-opacity duration-1000 ease-out will-change-[opacity] ${
+        className={`absolute inset-0 h-full w-full object-cover object-[center_42%] transition-opacity duration-1000 ease-out ${
           posterLoaded ? "opacity-100" : "opacity-90"
         }`}
       />
 
-      {/* 2. Hardware-Accelerated Seamless Video Player */}
+      {/* Video — cache-busted */}
       {!useCanvasFallback && (
         <video
           ref={videoRef}
@@ -209,18 +185,18 @@ export function HeroVideoBackground({
           muted
           playsInline
           preload="auto"
-          poster={posterSrc}
+          poster={`${posterSrc}${CACHE_BUST}`}
           onPlaying={() => setIsVideoPlaying(true)}
-          className={`absolute inset-0 h-full w-full object-cover object-[center_42%] transition-opacity duration-700 ease-out will-change-[opacity] ${
+          className={`absolute inset-0 h-full w-full object-cover object-[center_42%] transition-opacity duration-700 ease-out ${
             isVideoPlaying ? "opacity-100" : "opacity-0"
           }`}
         >
-          <source src={videoWebmSrc} type="video/webm" />
-          <source src={videoMp4Src} type="video/mp4" />
+          <source src={`${videoMp4Src}${CACHE_BUST}`} type="video/mp4" />
+          <source src={`${videoWebmSrc}${CACHE_BUST}`} type="video/webm" />
         </video>
       )}
 
-      {/* 3. Canvas Fallback Player (for battery-saver / restricted autoplay devices) */}
+      {/* Canvas fallback — forward loop only */}
       {useCanvasFallback && (
         <canvas
           ref={canvasRef}
@@ -228,7 +204,7 @@ export function HeroVideoBackground({
         />
       )}
 
-      {/* 4. Luxury Cinematic Vignette & Depth Enhancement Overlay */}
+      {/* Vignette */}
       <div className="absolute inset-0 bg-radial-[circle_at_center,transparent_40%,rgba(0,0,0,0.35)_100%]" />
     </div>
   );
