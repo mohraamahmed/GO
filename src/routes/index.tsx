@@ -274,7 +274,7 @@ function Index() {
         <section className="reveal mood-picker relative overflow-hidden" aria-label="اختر مزاجك">
           <div className="mood-content relative">
             <div className="flex items-center justify-between">
-              <h2 className="mood-heading flex items-center gap-2 font-display"><Sparkles className="text-primary" strokeWidth={1.3} /> اختر مزاجك:</h2>
+              <h2 className="mood-heading flex items-center gap-2 font-display">اختر مزاجك:</h2>
               {mood != null && (
                 <button onClick={() => setMood(null)} className="flex items-center gap-1 text-sm text-primary">
                   <X className="h-3.5 w-3.5" /> كل الأجواء
