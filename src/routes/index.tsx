@@ -1,6 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
+import { getCurrentUserFn, logoutUserFn } from "@/lib/api-auth.functions";
+import { SubscriptionModal } from "@/components/SubscriptionModal";
+import { toast } from "sonner";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import {
@@ -8,7 +11,7 @@ import {
   Calculator, ChevronLeft, TreePine, Star, Aperture, Clock, ShieldCheck,
   Minus, Plus, Shuffle, X, BarChart3, GitCompareArrows, Map as MapIcon, Bookmark, User, Compass,
   Search, Phone, Globe, ExternalLink, Share2, Coffee, Utensils, Check, MessageCircle,
-  Wifi, Zap, Car, Wind, VolumeX, BadgeCheck, CheckCircle2,
+  Wifi, Zap, Car, Wind, VolumeX, BadgeCheck, CheckCircle2, Crown, LogIn, LogOut,
 } from "lucide-react";
 import { HeroVideoBackground } from "@/components/HeroVideoBackground";
 import { Button } from "@/components/ui/button";
@@ -92,10 +95,23 @@ function NavMenu({
   onOpenFavorites?: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [isSubscriptionOpen, setIsSubscriptionOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { data: authData } = useQuery({
+    queryKey: ["current-user"],
+    queryFn: () => getCurrentUserFn(),
+    staleTime: 60_000,
+  });
+
+  const user = authData?.user;
+  const subscription = authData?.subscription;
+
   const scroll = (id: string) => {
     setOpen(false);
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
+
   const items: { icon: typeof Compass; label: string; action?: (() => void) | undefined; soon?: boolean }[] = [
     { icon: Compass, label: "الرئيسية", action: () => { setOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); } },
     { icon: Menu, label: "كل الكافيهات", action: undefined },
@@ -106,8 +122,8 @@ function NavMenu({
     { icon: GitCompareArrows, label: "المقارنة", action: () => { setOpen(false); onOpenCompare?.(); } },
     { icon: Bookmark, label: "المفضلة والخطط", action: () => { setOpen(false); onOpenFavorites?.(); } },
     { icon: MapIcon, label: "الخريطة", soon: true },
-    { icon: User, label: "حسابي", soon: true },
   ];
+
   return (
     <div className="relative">
       <button onClick={() => setOpen(!open)} className="nav-item glass grid h-12 w-12 place-items-center rounded-full transition hover:shadow-glow" aria-label="القائمة" aria-expanded={open}>
@@ -116,30 +132,97 @@ function NavMenu({
       {open && (
         <>
           <button aria-hidden className="fixed inset-0 z-40 cursor-default" onClick={() => setOpen(false)} />
-          <nav className="glass absolute left-0 top-14 z-50 w-64 rounded-2xl p-2 shadow-glow" aria-label="التنقل الرئيسي">
+          <nav className="glass absolute left-0 top-14 z-50 w-72 rounded-2xl p-2 shadow-glow" aria-label="التنقل الرئيسي" dir="rtl">
+            {/* USER PROFILE / AUTH SECTION */}
+            {user ? (
+              <div className="border-b border-border/50 p-3 mb-1.5 bg-card/40 rounded-xl">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-sm text-foreground">{user.fullName}</span>
+                  <span className="text-[10px] rounded px-1.5 py-0.5 bg-primary/10 text-primary font-mono">{user.role}</span>
+                </div>
+                <div className="mt-1 flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground font-mono" dir="ltr">{user.phoneNumber}</span>
+                  {subscription?.hasActiveSubscription ? (
+                    <span className="text-[10px] text-emerald-500 font-medium">مشترك ({subscription.daysRemaining} يوم)</span>
+                  ) : (
+                    <button
+                      onClick={() => { setOpen(false); setIsSubscriptionOpen(true); }}
+                      className="text-[11px] text-primary hover:underline flex items-center gap-1 font-semibold"
+                    >
+                      <Crown className="h-3 w-3" /> اشترك الآن
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="border-b border-border/50 p-2 mb-1.5">
+                <Link
+                  to="/auth"
+                  onClick={() => setOpen(false)}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90"
+                >
+                  <LogIn className="h-3.5 w-3.5" /> تسجيل الدخول / حساب جديد
+                </Link>
+              </div>
+            )}
+
+            {user?.role === "ADMIN" && (
+              <Link
+                to="/admin"
+                onClick={() => setOpen(false)}
+                className="flex w-full items-center gap-3 rounded-xl px-4 py-2 text-sm font-medium text-amber-500 hover:bg-amber-500/10 mb-1"
+              >
+                <ShieldCheck className="h-4 w-4" /> لوحة الإدارة (Admin)
+              </Link>
+            )}
+
+            {user && (
+              <button
+                onClick={() => { setOpen(false); setIsSubscriptionOpen(true); }}
+                className="flex w-full items-center gap-3 rounded-xl px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10 mb-1"
+              >
+                <Crown className="h-4 w-4" /> باقة الاشتراك (100 ج.م)
+              </button>
+            )}
+
             {items.map((it) =>
               it.soon ? (
-                <span key={it.label} className="flex w-full items-center justify-between rounded-xl px-4 py-2.5 text-sm text-muted-foreground/60">
+                <span key={it.label} className="flex w-full items-center justify-between rounded-xl px-4 py-2 text-sm text-muted-foreground/60">
                   <span className="flex items-center gap-3"><it.icon className="h-4 w-4" />{it.label}</span>
                   <span className="text-[10px]">قريبًا</span>
                 </span>
               ) : it.label === "كل الكافيهات" ? (
-                <Link key={it.label} to="/cafes" onClick={() => setOpen(false)} className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm transition hover:bg-primary/10">
+                <Link key={it.label} to="/cafes" onClick={() => setOpen(false)} className="flex w-full items-center gap-3 rounded-xl px-4 py-2 text-sm transition hover:bg-primary/10">
                   <it.icon className="h-4 w-4 text-primary" />{it.label}
                 </Link>
               ) : it.label === "تقرير جودة البيانات" ? (
-                <Link key={it.label} to="/data-quality" onClick={() => setOpen(false)} className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm transition hover:bg-primary/10">
+                <Link key={it.label} to="/data-quality" onClick={() => setOpen(false)} className="flex w-full items-center gap-3 rounded-xl px-4 py-2 text-sm transition hover:bg-primary/10">
                   <it.icon className="h-4 w-4 text-primary" />{it.label}
                 </Link>
               ) : (
-                <button key={it.label} onClick={it.action} className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm transition hover:bg-primary/10">
+                <button key={it.label} onClick={it.action} className="flex w-full items-center gap-3 rounded-xl px-4 py-2 text-sm transition hover:bg-primary/10">
                   <it.icon className="h-4 w-4 text-primary" />{it.label}
                 </button>
               ),
             )}
+
+            {user && (
+              <button
+                onClick={async () => {
+                  await logoutUserFn();
+                  queryClient.invalidateQueries({ queryKey: ["current-user"] });
+                  toast.success("تم تسجيل الخروج بنجاح");
+                  setOpen(false);
+                }}
+                className="mt-1 border-t border-border/40 pt-1.5 flex w-full items-center gap-3 rounded-xl px-4 py-2 text-sm text-destructive hover:bg-destructive/10"
+              >
+                <LogOut className="h-4 w-4" /> تسجيل الخروج
+              </button>
+            )}
           </nav>
         </>
       )}
+      <SubscriptionModal isOpen={isSubscriptionOpen} onClose={() => setIsSubscriptionOpen(false)} user={user} />
     </div>
   );
 }

@@ -1,0 +1,221 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
+enum SubscriptionStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PaymentMethod {
+  VODAFONE_CASH
+  INSTAPAY
+}
+
+model User {
+  id            String         @id @default(uuid())
+  fullName      String
+  phoneNumber   String         @unique
+  passwordHash  String
+  role          Role           @default(USER)
+  accountStatus AccountStatus  @default(ACTIVE)
+  email         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  lastLoginAt   DateTime?
+
+  sessions      Session[]
+  subscriptions Subscription[]
+  payments      Payment[]
+  notifications Notification[]
+  restrictions  UserRestriction[]
+  auditLogs     AuditLog[]     @relation("TargetUserAudit")
+  actionsLogged AuditLog[]     @relation("ActorAudit")
+
+  @@index([phoneNumber])
+  @@index([role])
+  @@index([accountStatus])
+}
+
+model SubscriptionPlan {
+  id           String         @id @default(uuid())
+  name         String
+  description  String?
+  price        Decimal        @db.Decimal(10, 2)
+  currency     String         @default("EGP")
+  durationDays Int            @default(30)
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  subscriptions Subscription[]
+
+  @@index([isActive])
+}
+
+model Subscription {
+  id          String             @id @default(uuid())
+  userId      String
+  planId      String
+  status      SubscriptionStatus @default(PENDING)
+  startDate   DateTime?
+  endDate     DateTime?
+  activatedAt DateTime?
+  cancelledAt DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan        SubscriptionPlan   @relation(fields: [planId], references: [id])
+  payments    Payment[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([endDate])
+}
+
+model Payment {
+  id                   String        @id @default(uuid())
+  userId               String
+  subscriptionId       String?
+  amount               Decimal       @db.Decimal(10, 2)
+  currency             String        @default("EGP")
+  paymentMethod        PaymentMethod
+  transactionReference String?
+  status               PaymentStatus @default(PENDING)
+  reviewedBy           String?
+  reviewedAt           DateTime?
+  rejectionReason      String?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  user                 User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription         Subscription? @relation(fields: [subscriptionId], references: [id])
+  receipts             PaymentReceipt[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([transactionReference])
+}
+
+model PaymentReceipt {
+  id               String   @id @default(uuid())
+  paymentId        String
+  storageKey       String   @unique
+  originalFilename String
+  mimeType         String
+  fileSize         Int
+  uploadedAt       DateTime @default(now())
+
+  payment          Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+}
+
+model Session {
+  id               String   @id @default(uuid())
+  userId           String
+  sessionTokenHash String   @unique
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
+  lastUsedAt       DateTime @default(now())
+
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sessionTokenHash])
+  @@index([expiresAt])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String   @default("INFO")
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+}
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  actorId      String?
+  targetUserId String?
+  action       String
+  entityType   String
+  entityId     String?
+  metadata     Json?
+  ipAddress    String?
+  createdAt    DateTime @default(now())
+
+  actor        User?    @relation("ActorAudit", fields: [actorId], references: [id], onDelete: SetNull)
+  targetUser   User?    @relation("TargetUserAudit", fields: [targetUserId], references: [id], onDelete: SetNull)
+
+  @@index([actorId])
+  @@index([targetUserId])
+  @@index([action])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model UserRestriction {
+  id              String   @id @default(uuid())
+  userId          String
+  restrictionType String
+  reason          String?
+  createdBy       String?
+  expiresAt       DateTime?
+  createdAt       DateTime @default(now())
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model LoginAttempt {
+  id          String   @id @default(uuid())
+  phoneNumber String
+  ipAddress   String?
+  success     Boolean
+  createdAt   DateTime @default(now())
+
+  @@index([phoneNumber, createdAt])
+  @@index([ipAddress, createdAt])
+}
+
+model SystemSetting {
+  id           String   @id @default(uuid())
+  settingKey   String   @unique
+  settingValue String
+  updatedAt    DateTime @updatedAt
+
+  @@index([settingKey])
+}
