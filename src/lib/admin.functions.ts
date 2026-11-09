@@ -111,7 +111,7 @@ export const adminDashboard = createServerFn({ method: "GET" })
 
 export const adminListCafes = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { search?: string; areaClass?: string; archived?: boolean }) => ({
+  .validator((d: { search?: string; areaClass?: string; archived?: boolean }) => ({
     search: d.search ? str(d.search, 120) : "",
     areaClass: d.areaClass ? str(d.areaClass, 40) : "",
     archived: Boolean(d.archived),
@@ -136,7 +136,7 @@ export const adminListCafes = createServerFn({ method: "GET" })
 
 export const adminUpdateCafe = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string; patch: Record<string, unknown>; reason: string; source?: string }) => ({
+  .validator((d: { id: string; patch: Record<string, unknown>; reason: string; source?: string }) => ({
     id: str(d.id, 120),
     patch: d.patch ?? {},
     reason: str(d.reason, 500),
@@ -169,7 +169,7 @@ export const adminUpdateCafe = createServerFn({ method: "POST" })
 
 export const adminArchiveCafe = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string; reason: string; restore?: boolean }) => ({
+  .validator((d: { id: string; reason: string; restore?: boolean }) => ({
     id: str(d.id, 120),
     reason: str(d.reason, 500),
     restore: Boolean(d.restore),
@@ -195,7 +195,7 @@ export const adminArchiveCafe = createServerFn({ method: "POST" })
 
 export const adminReclassifyArea = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string; areaClass: string; reason: string; source: string }) => ({
+  .validator((d: { id: string; areaClass: string; reason: string; source: string }) => ({
     id: str(d.id, 120),
     areaClass: str(d.areaClass, 40),
     reason: str(d.reason, 500),
@@ -237,7 +237,7 @@ export const adminReclassifyArea = createServerFn({ method: "POST" })
 
 export const adminListMenu = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { cafeId: string }) => ({ cafeId: str(d.cafeId, 120) }))
+  .validator((d: { cafeId: string }) => ({ cafeId: str(d.cafeId, 120) }))
   .handler(async ({ data, context }) => {
     const ctx = context as Ctx;
     await requireStaff(ctx);
@@ -253,7 +253,7 @@ export const adminListMenu = createServerFn({ method: "GET" })
 
 export const adminUpsertMenuItem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (d: {
       id?: string;
       cafeId: string;
@@ -350,7 +350,7 @@ export const adminUpsertMenuItem = createServerFn({ method: "POST" })
 
 export const adminPriceHistory = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { menuItemId: string }) => ({ menuItemId: str(d.menuItemId, 60) }))
+  .validator((d: { menuItemId: string }) => ({ menuItemId: str(d.menuItemId, 60) }))
   .handler(async ({ data, context }) => {
     const ctx = context as Ctx;
     await requireStaff(ctx);
@@ -367,7 +367,7 @@ export const adminPriceHistory = createServerFn({ method: "GET" })
 
 export const adminListPhotos = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { status?: string; cafeId?: string }) => ({
+  .validator((d: { status?: string; cafeId?: string }) => ({
     status: d.status ? str(d.status, 40) : "",
     cafeId: d.cafeId ? str(d.cafeId, 120) : "",
   }))
@@ -388,7 +388,7 @@ export const adminListPhotos = createServerFn({ method: "GET" })
 
 export const adminAddPhoto = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (d: { cafeId: string; url: string; source: string; rightsHolder?: string; licenseType?: string; permissionProof?: string }) => ({
       cafeId: str(d.cafeId, 120),
       url: str(d.url, 1000),
@@ -430,7 +430,7 @@ export const adminAddPhoto = createServerFn({ method: "POST" })
 
 export const adminReviewPhoto = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string; status: string; reason: string }) => ({
+  .validator((d: { id: string; status: string; reason: string }) => ({
     id: str(d.id, 60),
     status: str(d.status, 40),
     reason: str(d.reason, 500),
@@ -463,7 +463,7 @@ export const adminReviewPhoto = createServerFn({ method: "POST" })
 
 export const adminListVerification = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { status?: string; type?: string }) => ({
+  .validator((d: { status?: string; type?: string }) => ({
     status: d.status ? str(d.status, 40) : "pending",
     type: d.type ? str(d.type, 40) : "",
   }))
@@ -484,7 +484,7 @@ export const adminListVerification = createServerFn({ method: "GET" })
 
 export const adminDecideVerification = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string; decision: string; reason: string }) => ({
+  .validator((d: { id: string; decision: string; reason: string }) => ({
     id: str(d.id, 60),
     decision: str(d.decision, 20),
     reason: str(d.reason, 500),
@@ -535,7 +535,7 @@ export const adminListSources = createServerFn({ method: "GET" })
 
 export const adminAddSource = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (d: { name: string; type: string; url?: string; cafeId?: string; supportsField?: string; notes?: string }) => ({
       name: str(d.name, 300),
       type: str(d.type, 60),
@@ -576,7 +576,7 @@ export const adminAddSource = createServerFn({ method: "POST" })
 
 export const adminAuditLog = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { limit?: number }) => ({ limit: Math.min(Number(d.limit) || 200, 500) }))
+  .validator((d: { limit?: number }) => ({ limit: Math.min(Number(d.limit) || 200, 500) }))
   .handler(async ({ data, context }) => {
     const ctx = context as Ctx;
     await requireStaff(ctx);
@@ -593,7 +593,7 @@ export const adminAuditLog = createServerFn({ method: "GET" })
 
 export const submitCorrectionRequest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { type: string; cafeId?: string; message: string }) => ({
+  .validator((d: { type: string; cafeId?: string; message: string }) => ({
     type: str(d.type, 40),
     cafeId: d.cafeId ? str(d.cafeId, 120) : "",
     message: str(d.message, 2000),

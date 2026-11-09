@@ -20,6 +20,7 @@ export interface MenuItem {
   categoryLabel: string;
   price: number;
   desc?: string | undefined;
+  description?: string | undefined;
 }
 
 export function getCafeMenuData(

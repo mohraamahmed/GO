@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "./prisma";
 import {
   normalizeEgyptianPhone,
+  validatePasswordStrength,
   hashPassword,
   verifyPassword,
   createSession,
@@ -19,16 +20,22 @@ import {
   type AuthenticatedContext,
 } from "./server-auth.server";
 
-const registerSchema = z.object({
-  fullName: z.string().min(2, "الاسم الكامل يجب أن يكون حرفين على الأقل").max(100),
-  phoneNumber: z.string().min(10, "رقم الهاتف غير صالح"),
-  password: z.string().min(8, "كلمة المرور يجب أن لا تقل عن 8 أحرف"),
-  passwordConfirm: z.string(),
-  email: z.string().email("البريد الإلكتروني غير صالح").optional().or(z.literal("")),
-}).refine((data) => data.password === data.passwordConfirm, {
-  message: "كلمتا المرور غير متطابقتين",
-  path: ["passwordConfirm"],
-});
+const registerSchema = z
+  .object({
+    fullName: z.string().trim().max(100).optional(),
+    phoneNumber: z.string().trim().min(10, "رقم الهاتف غير صالح"),
+    password: z.string().min(8, "كلمة المرور يجب أن لا تقل عن 8 أحرف"),
+    passwordConfirm: z.string().optional(),
+    email: z.string().email("البريد الإلكتروني غير صالح").optional().or(z.literal("")),
+  })
+  .refine((data) => !data.passwordConfirm || data.password === data.passwordConfirm, {
+    message: "كلمتا المرور غير متطابقتين",
+    path: ["passwordConfirm"],
+  })
+  .refine((data) => validatePasswordStrength(data.password).valid, {
+    message: "كلمة المرور يجب أن تحتوي على حرف واحد ورقم واحد على الأقل",
+    path: ["password"],
+  });
 
 const loginSchema = z.object({
   phoneNumber: z.string().min(10, "رقم الهاتف غير صالح"),
@@ -65,7 +72,7 @@ export const registerUserFn = createServerFn({ method: "POST" })
 
     const user = await prisma.user.create({
       data: {
-        fullName: data.fullName.trim(),
+        fullName: data.fullName?.trim() || "عضو كافيلينز",
         phoneNumber: normalizedPhone,
         passwordHash,
         role,
@@ -76,7 +83,7 @@ export const registerUserFn = createServerFn({ method: "POST" })
 
     // Create session and set cookie
     const { token, expiresAt } = await createSession(user.id);
-    const isProduction = process.env.NODE_ENV === "production";
+    const isProduction = process.env["NODE_ENV"] === "production";
     setCookie(SESSION_COOKIE_NAME, token, {
       httpOnly: true,
       secure: isProduction,
@@ -150,7 +157,7 @@ export const loginUserFn = createServerFn({ method: "POST" })
     });
 
     const { token, expiresAt } = await createSession(user.id);
-    const isProduction = process.env.NODE_ENV === "production";
+    const isProduction = process.env["NODE_ENV"] === "production";
     setCookie(SESSION_COOKIE_NAME, token, {
       httpOnly: true,
       secure: isProduction,
@@ -246,6 +253,11 @@ export const changePasswordFn = createServerFn({ method: "POST" })
       throw new Error("كلمة المرور الحالية غير صحيحة");
     }
 
+    const strength = validatePasswordStrength(data.newPassword);
+    if (!strength.valid) {
+      throw new Error(strength.message || "كلمة المرور الجديدة غير مطابقة لمعايير الأمان");
+    }
+
     const newHash = await hashPassword(data.newPassword);
 
     await prisma.user.update({
@@ -258,7 +270,7 @@ export const changePasswordFn = createServerFn({ method: "POST" })
 
     // Create fresh session for current device
     const { token, expiresAt } = await createSession(user.id);
-    const isProduction = process.env.NODE_ENV === "production";
+    const isProduction = process.env["NODE_ENV"] === "production";
     setCookie(SESSION_COOKIE_NAME, token, {
       httpOnly: true,
       secure: isProduction,

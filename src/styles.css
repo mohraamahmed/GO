@@ -63,6 +63,19 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* CaféLens 2.0 Semantic Tokens */
+  --color-surface-base: var(--background);
+  --color-surface-card: var(--card);
+  --color-surface-elevated: var(--popover);
+  --color-surface-subtle: var(--muted);
+  --color-text-primary: var(--foreground);
+  --color-text-secondary: var(--muted-foreground);
+  --color-gold: var(--primary);
+  --color-status-success: oklch(0.68 0.16 145);
+  --color-status-warning: oklch(0.76 0.16 75);
+  --color-status-error: oklch(0.58 0.22 28);
+  --color-status-info: oklch(0.65 0.14 230);
 }
 
 :root {
@@ -164,12 +177,32 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
-  }
-}
-
-@layer base {
-  body {
     font-family: var(--font-sans);
+  }
+
+  input,
+  textarea,
+  select {
+    color-scheme: dark;
+  }
+
+  /* Neutralize browser autofill white background boxes in dark themes */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  textarea:-webkit-autofill:focus,
+  select:-webkit-autofill,
+  select:-webkit-autofill:hover,
+  select:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px #120d09 inset !important;
+    box-shadow: 0 0 0 1000px #120d09 inset !important;
+    -webkit-text-fill-color: #f5ebd9 !important;
+    caret-color: #edd391 !important;
+    border-radius: inherit !important;
+    transition: background-color 5000000s ease-in-out 0s, color 5000000s ease-in-out 0s !important;
   }
 }
 
@@ -198,8 +231,32 @@
   background: var(--gradient-fade);
 }
 
+@utility pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
+}
+
+@utility pt-safe {
+  padding-top: max(env(safe-area-inset-top, 0px), 16px);
+}
+
+@utility luxury-card {
+  background: oklch(0.18 0.018 50 / 85%);
+  backdrop-filter: blur(12px);
+  border: 1px solid oklch(0.76 0.08 68 / 15%);
+  border-radius: 1.25rem;
+  transition: all 0.25s ease-out;
+}
+
+@utility luxury-card-hover {
+  &:hover {
+    border-color: oklch(0.76 0.09 68 / 40%);
+    box-shadow: 0 10px 30px -10px oklch(0.76 0.09 68 / 20%);
+    transform: translateY(-2px);
+  }
+}
+
 .mood-picker {
-  padding: 44px 26px 34px;
+  padding: 22px 20px 16px;
 }
 
 .mood-heading {
@@ -316,12 +373,12 @@
 
 @media (max-width: 639px) {
   .mood-picker {
-    padding: 26px 8px 20px;
+    padding: 12px 6px 10px;
   }
 
   .mood-heading {
-    margin: 0 4px 11px;
-    font-size: 17px;
+    margin: 0 4px 8px;
+    font-size: 15px;
   }
 
   .mood-heading svg {

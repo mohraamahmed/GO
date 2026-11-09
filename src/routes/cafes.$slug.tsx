@@ -19,6 +19,10 @@ import {
 } from "@/lib/user-storage";
 import { CafeComparisonModal } from "@/components/CafeComparisonModal";
 import { FavoritesDrawer } from "@/components/FavoritesDrawer";
+import { SubscriptionModal } from "@/components/SubscriptionModal";
+import { getCurrentUserFn } from "@/lib/api-auth.functions";
+import { Button } from "@/components/ui/button";
+import { Crown, Lock } from "lucide-react";
 import { SmartImage, ThumbImage } from "@/components/SmartImage";
 
 const cafeQuery = (slug: string) =>
@@ -106,6 +110,15 @@ function CafePage() {
   const [inCompare, setInCompare] = useState(false);
   const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
   const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
+  const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
+
+  const { data: authData } = useQuery({
+    queryKey: ["current-user"],
+    queryFn: () => getCurrentUserFn(),
+    staleTime: 60_000,
+  });
+  const user = authData?.user;
+  const isSubscribed = Boolean(authData?.subscription?.hasActiveSubscription || user?.role === "ADMIN");
 
   useEffect(() => {
     if (c?.id) {
@@ -261,50 +274,18 @@ function CafePage() {
         <div className="absolute top-1/3 left-1/4 w-[500px] h-[500px] bg-amber-600/5 rounded-full blur-[160px]" />
       </div>
 
-      {/* LUXURY TOP NAVIGATION BAR */}
-      <header className="sticky top-0 z-40 backdrop-blur-xl bg-background/80 border-b border-border/40 transition-all">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 py-3.5">
-          <Link
-            to="/cafes"
-            className="group flex items-center gap-2 text-xs sm:text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <div className="grid h-8 w-8 place-items-center rounded-xl bg-secondary/60 border border-border/40 group-hover:border-primary/50 group-hover:bg-primary/10 transition">
-              <ArrowRight className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
-            </div>
-            <span>كل الكافيهات</span>
-          </Link>
-
-          <div className="flex items-center gap-2 sm:gap-3">
-            <button
-              onClick={() => setIsFavoritesOpen(true)}
-              className="flex items-center gap-1.5 rounded-xl border border-border/50 bg-secondary/40 hover:bg-secondary/80 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition shadow-sm"
-            >
-              <Bookmark className="h-3.5 w-3.5 text-primary" />
-              <span className="hidden sm:inline">المفضلة والخطط</span>
-            </button>
-
-            <button
-              onClick={() => setIsCompareModalOpen(true)}
-              className="flex items-center gap-1.5 rounded-xl border border-border/50 bg-secondary/40 hover:bg-secondary/80 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition shadow-sm"
-            >
-              <GitCompareArrows className="h-3.5 w-3.5 text-primary" />
-              <span>المقارنة</span>
-              {getCompareList().length > 0 && (
-                <span className="grid h-4 w-4 place-items-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                  {getCompareList().length}
-                </span>
-              )}
-            </button>
-
-            <Link to="/" className="flex items-center gap-2 pr-2" dir="ltr">
-              <div className="grid h-8 w-8 place-items-center rounded-xl bg-primary/15 border border-primary/30">
-                <Aperture className="h-5 w-5 text-primary" strokeWidth={2} />
-              </div>
-              <span className="font-latin text-xl font-bold tracking-tight text-foreground hidden sm:inline">CaféLens</span>
-            </Link>
+      {/* BREADCRUMB / BACK LINK */}
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-4 pb-1">
+        <Link
+          to="/cafes"
+          className="group inline-flex items-center gap-2 text-xs sm:text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <div className="grid h-8 w-8 place-items-center rounded-xl bg-card border border-border/60 group-hover:border-primary/50 group-hover:bg-primary/10 transition shadow-sm">
+            <ArrowRight className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
           </div>
-        </div>
-      </header>
+          <span>العودة إلى دليل الكافيهات</span>
+        </Link>
+      </div>
 
       <main className="mx-auto max-w-7xl px-4 sm:px-6 pb-32 pt-6">
 
@@ -534,7 +515,30 @@ function CafePage() {
             </div>
           </div>
 
-          <div className="grid gap-8 lg:grid-cols-12 items-start">
+          {!isSubscribed ? (
+            <div className="rounded-3xl border border-amber-500/30 bg-gradient-to-br from-amber-950/20 via-background to-card/60 p-8 sm:p-12 text-center backdrop-blur-xl space-y-4">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-glow">
+                <Crown className="h-7 w-7 text-primary animate-pulse" />
+              </div>
+              <div className="space-y-1.5 max-w-md mx-auto">
+                <h3 className="font-display text-xl sm:text-2xl font-bold text-foreground">
+                  قائمة المنيو والأسعار محجوبة للمشتركين فقط
+                </h3>
+                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                  احصل على وصول فوري لجميع أسعار وقوائم الكافيهات المعتمدة وحاسبة الفاتورة ومشاركة خطة الخروجة.
+                </p>
+              </div>
+              <div className="pt-2">
+                <Button
+                  onClick={() => setIsSubscriptionModalOpen(true)}
+                  className="bg-gold text-primary-foreground font-bold px-8 py-5 text-sm rounded-full shadow-glow"
+                >
+                  اشترك الآن (100 ج.م/شهر أو 1000 ج.م/سنة)
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid gap-8 lg:grid-cols-12 items-start">
             {/* MENU ITEMS (Right side in RTL) */}
             <div className="space-y-5 lg:col-span-7">
               {/* Category Pills & Search */}
@@ -778,7 +782,8 @@ function CafePage() {
               </div>
             </div>
           </div>
-        </section>
+        )}
+      </section>
 
         {/* WORKING HOURS & CONTACT INFO ROW */}
         <section className="mt-14 grid gap-6 md:grid-cols-2">
@@ -990,17 +995,6 @@ function CafePage() {
           </Link>
         </div>
       </main>
-
-      <CafeComparisonModal
-        isOpen={isCompareModalOpen}
-        onClose={() => setIsCompareModalOpen(false)}
-        allCafes={allCafes}
-      />
-      <FavoritesDrawer
-        isOpen={isFavoritesOpen}
-        onClose={() => setIsFavoritesOpen(false)}
-        allCafes={allCafes}
-      />
     </div>
   );
 }

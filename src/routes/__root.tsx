@@ -4,30 +4,41 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { type ReactNode } from "react";
+import { GlobalUIProvider } from "@/context/GlobalUIContext";
+import { Header } from "@/components/Header";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { Footer } from "@/components/Footer";
+import { Toaster } from "@/components/ui/sonner";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
 
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
+    <div className="flex min-h-screen items-center justify-center bg-background px-4" dir="rtl">
+      <div className="max-w-md text-center p-8 rounded-3xl border border-border/60 bg-card/60 backdrop-blur-md">
+        <h1 className="text-7xl font-bold font-display text-primary">404</h1>
+        <h2 className="mt-4 text-xl font-semibold text-foreground">الصفحة غير موجودة</h2>
+        <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+          الصفحة التي تحاول الوصول إليها قد تم نقلها أو أنها غير متوفرة حالياً.
         </p>
-        <div className="mt-6">
+        <div className="mt-6 flex justify-center gap-3">
           <Link
             to="/"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            className="inline-flex items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground transition-all hover:bg-primary/90 shadow-sm"
           >
-            Go home
+            العودة للرئيسية
+          </Link>
+          <Link
+            to="/cafes"
+            className="inline-flex items-center justify-center rounded-xl border border-border bg-card px-5 py-2.5 text-sm font-medium text-foreground transition-all hover:bg-accent"
+          >
+            دليل الكافيهات
           </Link>
         </div>
       </div>
@@ -36,20 +47,17 @@ function NotFoundComponent() {
 }
 
 function ErrorComponent({ error, reset }: ErrorComponentProps) {
-  console.error(error);
+  console.error("[TanStack Router Error]:", error);
   const router = useRouter();
-  useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
+    <div className="flex min-h-screen items-center justify-center bg-background px-4" dir="rtl">
+      <div className="max-w-md text-center p-8 rounded-3xl border border-destructive/30 bg-card/80 backdrop-blur-md">
+        <h1 className="text-xl font-bold text-foreground">
+          تعذر تحميل هذه الصفحة
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
+        <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+          {error instanceof Error ? error.message : "حدث خطأ غير متوقع أثناء معالجة الطلب."}
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
@@ -57,15 +65,15 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
               router.invalidate();
               reset();
             }}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            className="inline-flex items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground transition-all hover:bg-primary/90 shadow-sm cursor-pointer"
           >
-            Try again
+            إعادة المحاولة
           </button>
           <a
             href="/"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+            className="inline-flex items-center justify-center rounded-xl border border-border bg-card px-5 py-2.5 text-sm font-medium text-foreground transition-all hover:bg-accent"
           >
-            Go home
+            الرئيسية
           </a>
         </div>
       </div>
@@ -119,11 +127,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="ar" dir="rtl">
+    <html lang="ar" dir="rtl" className="overflow-x-hidden">
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body className="overflow-x-hidden w-full max-w-full">
         {children}
         <Scripts />
       </body>
@@ -133,11 +141,29 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isAdminRoute = pathname.startsWith("/admin");
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <GlobalUIProvider>
+        {isAdminRoute ? (
+          <>
+            <Outlet />
+            <Toaster position="top-center" dir="rtl" />
+          </>
+        ) : (
+          <div className="flex flex-col min-h-screen bg-background text-foreground antialiased selection:bg-primary/20 selection:text-primary">
+            <Header />
+            <main className="flex-1 pb-16 md:pb-0">
+              <Outlet />
+            </main>
+            <Footer />
+            <MobileBottomNav />
+            <Toaster position="top-center" dir="rtl" />
+          </div>
+        )}
+      </GlobalUIProvider>
     </QueryClientProvider>
   );
 }

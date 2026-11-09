@@ -10,6 +10,7 @@ import {
   reviewPaymentFn,
   adminExtendSubscriptionFn,
   adminGetReceiptImageFn,
+  adminToggleSubscriptionStatusFn,
 } from "@/lib/api-admin.functions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -104,8 +105,8 @@ function AdminControlCenter() {
   const reviewPaymentMutation = useMutation({
     mutationFn: (vars: { paymentId: string; action: "APPROVE" | "REJECT"; rejectionReason?: string }) =>
       reviewPaymentFn({ data: vars }),
-    onSuccess: (res) => {
-      toast.success(res.message);
+    onSuccess: (res: any) => {
+      toast.success(res?.message || "تم تحديث حالة العملية بنجاح");
       setRejectDialogPaymentId(null);
       setRejectionReason("");
       queryClient.invalidateQueries({ queryKey: ["admin-payments"] });
@@ -127,9 +128,20 @@ function AdminControlCenter() {
     onError: (err: any) => toast.error(err?.message || "تعذر تمديد الاشتراك"),
   });
 
+  const toggleSubMutation = useMutation({
+    mutationFn: (vars: { userId: string; action: "ACTIVATE" | "CANCEL"; days?: number }) =>
+      adminToggleSubscriptionStatusFn({ data: vars }),
+    onSuccess: (res) => {
+      toast.success(res.message);
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-analytics"] });
+    },
+    onError: (err: any) => toast.error(err?.message || "تعذر تحديث حالة الاشتراك"),
+  });
+
   const viewReceiptMutation = useMutation({
     mutationFn: (storageKey: string) => adminGetReceiptImageFn({ data: { storageKey } }),
-    onSuccess: (res) => {
+    onSuccess: (res: any) => {
       setReceiptImageDataUrl(res.dataUrl);
     },
     onError: () => toast.error("تعذر تحميل صورة الإيصال من السيرفر"),
@@ -151,9 +163,9 @@ function AdminControlCenter() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {analytics?.pendingPaymentsCount ? (
+          {analytics?.pendingPayments ? (
             <Badge variant="destructive" className="px-3 py-1 text-sm font-semibold animate-pulse">
-              {analytics.pendingPaymentsCount} مدفوعات بانتظار الاعتماد
+              {analytics.pendingPayments} مدفوعات بانتظار الاعتماد
             </Badge>
           ) : (
             <Badge variant="secondary" className="px-3 py-1 text-sm text-primary">
@@ -170,9 +182,9 @@ function AdminControlCenter() {
           </TabsTrigger>
           <TabsTrigger value="payments" className="flex items-center gap-2">
             <CreditCard className="h-4 w-4" /> طابور المدفوعات
-            {(analytics?.pendingPaymentsCount ?? 0) > 0 && (
+            {(analytics?.pendingPayments ?? 0) > 0 && (
               <span className="mr-1 rounded-full bg-destructive px-1.5 py-0.5 text-[10px] text-destructive-foreground">
-                {analytics?.pendingPaymentsCount}
+                {analytics?.pendingPayments}
               </span>
             )}
           </TabsTrigger>
@@ -204,7 +216,7 @@ function AdminControlCenter() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-foreground">
-                  {isAnalyticsLoading ? <Skeleton className="h-8 w-16" /> : analytics?.activeSubscriptionsCount}
+                  {isAnalyticsLoading ? <Skeleton className="h-8 w-16" /> : analytics?.activeSubscribers}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">مشتركون يتمتعون بكافة المزايا</p>
               </CardContent>
@@ -217,7 +229,7 @@ function AdminControlCenter() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-amber-500">
-                  {isAnalyticsLoading ? <Skeleton className="h-8 w-16" /> : analytics?.pendingPaymentsCount}
+                  {isAnalyticsLoading ? <Skeleton className="h-8 w-16" /> : analytics?.pendingPayments}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">فودافون كاش وإنستاباي</p>
               </CardContent>
@@ -233,7 +245,7 @@ function AdminControlCenter() {
                   {isAnalyticsLoading ? (
                     <Skeleton className="h-8 w-24" />
                   ) : (
-                    `${analytics?.totalRevenueEgp?.toLocaleString() || 0} ج.م`
+                    `${analytics?.totalRevenueEGP?.toLocaleString() || 0} ج.م`
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">مدفوعات مؤكدة بنجاح</p>
@@ -447,16 +459,68 @@ function AdminControlCenter() {
                           </td>
                           <td className="py-3">
                             {u.hasActiveSubscription ? (
-                              <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/20">
-                                نشط حتى {new Date(u.subscriptionEndDate).toLocaleDateString("ar-EG")}
-                              </Badge>
+                              <div className="flex flex-col gap-1 items-start">
+                                <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/20">
+                                  نشط ({u.daysRemaining} يوم متبقي)
+                                </Badge>
+                                <span className="text-[10px] text-muted-foreground font-mono">
+                                  حتى {new Date(u.subscriptionEndDate).toLocaleDateString("ar-EG")}
+                                </span>
+                              </div>
                             ) : (
                               <span className="text-xs text-muted-foreground">غير مشترك</span>
                             )}
                           </td>
                           <td className="py-3">
-                            <div className="flex items-center gap-1.5">
-                              {/* Status action */}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {/* Direct Subscription Toggle: Activate / Cancel */}
+                              {u.hasActiveSubscription ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 text-xs text-amber-600 hover:bg-amber-600/10 font-medium"
+                                  disabled={toggleSubMutation.isPending}
+                                  onClick={() =>
+                                    toggleSubMutation.mutate({
+                                      userId: u.id,
+                                      action: "CANCEL",
+                                    })
+                                  }
+                                >
+                                  إيقاف الاشتراك
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 text-xs text-emerald-600 hover:bg-emerald-600/10 font-bold"
+                                  disabled={toggleSubMutation.isPending}
+                                  onClick={() =>
+                                    toggleSubMutation.mutate({
+                                      userId: u.id,
+                                      action: "ACTIVATE",
+                                      days: 30,
+                                    })
+                                  }
+                                >
+                                  تفعيل 30 يوم
+                                </Button>
+                              )}
+
+                              {/* Extend subscription */}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 text-xs flex items-center gap-1 font-medium"
+                                onClick={() => {
+                                  setSelectedUserForExtension(u);
+                                  setExtensionDays(30);
+                                }}
+                              >
+                                <CalendarPlus className="h-3.5 w-3.5" /> تمديد
+                              </Button>
+
+                              {/* Status action (Ban / Unban) */}
                               {u.accountStatus === "ACTIVE" ? (
                                 <Button
                                   variant="ghost"
@@ -484,34 +548,6 @@ function AdminControlCenter() {
                                   فك الحظر
                                 </Button>
                               )}
-
-                              {/* Extend subscription */}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 text-xs flex items-center gap-1"
-                                onClick={() => {
-                                  setSelectedUserForExtension(u);
-                                  setExtensionDays(30);
-                                }}
-                              >
-                                <CalendarPlus className="h-3.5 w-3.5" /> تمديد
-                              </Button>
-
-                              {/* Toggle Role */}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 text-xs text-muted-foreground"
-                                onClick={() =>
-                                  updateRoleMutation.mutate({
-                                    userId: u.id,
-                                    role: u.role === "ADMIN" ? "USER" : "ADMIN",
-                                  })
-                                }
-                              >
-                                {u.role === "ADMIN" ? "تخفيض لمستخدم" : "ترقية لمشرف"}
-                              </Button>
                             </div>
                           </td>
                         </tr>

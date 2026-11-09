@@ -1,6 +1,11 @@
 import { prisma } from "./prisma";
 import type { Subscription, Payment, SubscriptionStatus, PaymentStatus } from "@prisma/client";
 
+export const DB_TRANSACTION_OPTIONS = {
+  maxWait: 15000,
+  timeout: 30000,
+};
+
 export const PAYMENT_CONFIG = {
   OFFICIAL_PAYMENT_NUMBER: "01005209667",
   SUPPORTED_METHODS: ["VODAFONE_CASH", "INSTAPAY"] as const,
@@ -9,27 +14,62 @@ export const PAYMENT_CONFIG = {
   DEFAULT_CURRENCY: "EGP",
 };
 
+export const DEFAULT_PLANS_SEED = [
+  {
+    name: "اشتراك شهر",
+    description: "وصول كامل وشامل لجميع أدوات كافيه لنس وحاسبة الميزانية وخدمات الـ VIP لمدة 30 يوماً",
+    price: 100,
+    durationDays: 30,
+  },
+  {
+    name: "اشتراك شهرين",
+    description: "باقة الـ 60 يوماً مع كافة المزايا المتقدمة وإمكانية استكشاف وتخصيص الخروجات",
+    price: 200,
+    durationDays: 60,
+  },
+  {
+    name: "اشتراك 3 شهور",
+    description: "باقة ربع سنوية مميزة (90 يوماً) لتجربة متكاملة بدون أي قيود",
+    price: 280,
+    durationDays: 90,
+  },
+  {
+    name: "اشتراك سنوي (VIP)",
+    description: "باقة العام الكامل (365 يوماً) بأعلى توفير مع كامل التحديثات والميزات الحصرية",
+    price: 1000,
+    durationDays: 365,
+  },
+];
+
 /**
- * Ensures the default monthly subscription plan exists in the database.
+ * Ensures the default subscription plans exist in the database.
  */
 export async function getOrCreateDefaultPlan() {
   const existing = await prisma.subscriptionPlan.findFirst({
     where: { isActive: true },
-    orderBy: { createdAt: "asc" },
+    orderBy: { price: "asc" },
   });
 
   if (existing) return existing;
 
-  return prisma.subscriptionPlan.create({
-    data: {
-      name: "الباقة الشهرية المميزة",
-      description: "وصول غير محدود لجميع أدوات كافيه لنس وحاسبة الميزانية وخدمات الـ VIP لمدة 30 يومًا",
-      price: PAYMENT_CONFIG.DEFAULT_MONTHLY_PRICE,
-      currency: PAYMENT_CONFIG.DEFAULT_CURRENCY,
-      durationDays: PAYMENT_CONFIG.DEFAULT_DURATION_DAYS,
-      isActive: true,
-    },
-  });
+  // Seed all plans
+  for (const p of DEFAULT_PLANS_SEED) {
+    await prisma.subscriptionPlan.create({
+      data: {
+        name: p.name,
+        description: p.description,
+        price: p.price,
+        currency: PAYMENT_CONFIG.DEFAULT_CURRENCY,
+        durationDays: p.durationDays,
+        isActive: true,
+      },
+    });
+  }
+
+  return (await prisma.subscriptionPlan.findFirst({
+    where: { isActive: true },
+    orderBy: { price: "asc" },
+  }))!;
 }
 
 /**
@@ -78,15 +118,15 @@ export async function getUserSubscriptionStatus(userId: string): Promise<{
  */
 export async function createPaymentRequest(params: {
   userId: string;
-  planId?: string;
+  planId?: string | undefined;
   paymentMethod: "VODAFONE_CASH" | "INSTAPAY";
-  transactionReference?: string;
+  transactionReference?: string | undefined;
   receipt?: {
     originalFilename: string;
     mimeType: string;
     fileSize: number;
     storageKey: string;
-  };
+  } | undefined;
 }): Promise<{ payment: Payment; subscription: Subscription }> {
   const plan = params.planId
     ? await prisma.subscriptionPlan.findUnique({ where: { id: params.planId } })
@@ -94,6 +134,31 @@ export async function createPaymentRequest(params: {
 
   if (!plan || !plan.isActive) {
     throw new Error("خطة الاشتراك غير متوفرة حالياً");
+  }
+
+  // 1. Defend against pending queue flooding (max 2 pending requests per user)
+  const pendingCount = await prisma.payment.count({
+    where: {
+      userId: params.userId,
+      status: "PENDING",
+    },
+  });
+  if (pendingCount >= 2) {
+    throw new Error("لديك طلب اشتراك قيد المراجعة بالفعل. يرجى انتظار رد الإدارة قبل تقديم طلب جديد.");
+  }
+
+  // 2. Defend against Payment Reference Replay attacks
+  const normalizedRef = params.transactionReference ? params.transactionReference.trim() : null;
+  if (normalizedRef) {
+    const existingWithRef = await prisma.payment.findFirst({
+      where: {
+        transactionReference: normalizedRef,
+        status: { in: ["PENDING", "APPROVED"] },
+      },
+    });
+    if (existingWithRef) {
+      throw new Error("رقم العملية أو المرجع هذا مستخدم بالفعل في طلب سابق.");
+    }
   }
 
   return prisma.$transaction(async (tx) => {
@@ -143,7 +208,7 @@ export async function createPaymentRequest(params: {
     });
 
     return { payment, subscription };
-  });
+  }, DB_TRANSACTION_OPTIONS);
 }
 
 /**
@@ -163,6 +228,11 @@ export async function approvePayment(
       throw new Error("طلب الدفع غير موجود");
     }
 
+    // 1. Prevent Self-Approval (Separation of Duties)
+    if (payment.userId === adminId) {
+      throw new Error("FORBIDDEN: لا يسمح للمشرف باعتماد مدفوعاته الخاصة.");
+    }
+
     if (payment.status === "APPROVED") {
       throw new Error("تم اعتماد هذا الدفع مسبقاً");
     }
@@ -171,9 +241,9 @@ export async function approvePayment(
     const durationDays = payment.subscription?.plan?.durationDays || PAYMENT_CONFIG.DEFAULT_DURATION_DAYS;
     const endDate = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
 
-    // Update payment
-    const updatedPayment = await tx.payment.update({
-      where: { id: paymentId },
+    // 2. Concurrency-Safe Atomic Conditional Update
+    const updateCount = await tx.payment.updateMany({
+      where: { id: paymentId, status: "PENDING" },
       data: {
         status: "APPROVED",
         reviewedBy: adminId,
@@ -181,6 +251,14 @@ export async function approvePayment(
         rejectionReason: null,
       },
     });
+
+    if (updateCount.count === 0) {
+      throw new Error("طلب الدفع غير موجود أو تمت معالجته مسبقاً بالتوازي.");
+    }
+
+    const updatedPayment = (await tx.payment.findUnique({
+      where: { id: paymentId },
+    })) as Payment;
 
     let updatedSubscription: Subscription;
 
@@ -237,7 +315,7 @@ export async function approvePayment(
     });
 
     return { payment: updatedPayment, subscription: updatedSubscription };
-  });
+  }, DB_TRANSACTION_OPTIONS);
 }
 
 /**
@@ -258,19 +336,33 @@ export async function rejectPayment(
       throw new Error("طلب الدفع غير موجود");
     }
 
+    // 1. Prevent Self-Action
+    if (payment.userId === adminId) {
+      throw new Error("FORBIDDEN: لا يمكن للمشرف اتخاذ إجراء على مدفوعاته الشخصية.");
+    }
+
     if (payment.status !== "PENDING") {
       throw new Error("لا يمكن رفض طلب تمت معالجته بالفعل");
     }
 
-    const updatedPayment = await tx.payment.update({
-      where: { id: paymentId },
+    // 2. Concurrency-Safe Atomic Conditional Update
+    const updateCount = await tx.payment.updateMany({
+      where: { id: paymentId, status: "PENDING" },
       data: {
         status: "REJECTED",
         reviewedBy: adminId,
         reviewedAt: new Date(),
-        rejectionReason: rejectionReason.trim(),
+        rejectionReason: rejectionReason.trim().slice(0, 500),
       },
     });
+
+    if (updateCount.count === 0) {
+      throw new Error("طلب الدفع غير موجود أو تمت معالجته مسبقاً بالتوازي.");
+    }
+
+    const updatedPayment = (await tx.payment.findUnique({
+      where: { id: paymentId },
+    })) as Payment;
 
     if (payment.subscriptionId) {
       await tx.subscription.update({
@@ -307,14 +399,14 @@ export async function rejectPayment(
     });
 
     return updatedPayment;
-  });
+  }, DB_TRANSACTION_OPTIONS);
 }
 
 /**
  * Extends an active subscription by a given number of days.
  */
 export async function extendSubscription(
-  subscriptionId: string,
+  targetId: string,
   extraDays: number,
   adminId: string,
   reason?: string
@@ -322,17 +414,76 @@ export async function extendSubscription(
   if (extraDays <= 0) throw new Error("عدد الأيام يجب أن يكون أكبر من صفر");
 
   return prisma.$transaction(async (tx) => {
-    const sub = await tx.subscription.findUnique({
-      where: { id: subscriptionId },
+    let sub = await tx.subscription.findUnique({
+      where: { id: targetId },
     });
 
-    if (!sub) throw new Error("الاشتراك غير موجود");
+    if (!sub) {
+      // Prioritize currently ACTIVE subscription with future endDate
+      sub = await tx.subscription.findFirst({
+        where: {
+          userId: targetId,
+          status: "ACTIVE",
+          endDate: { gt: new Date() },
+        },
+        orderBy: { endDate: "desc" },
+      });
+    }
+
+    if (!sub) {
+      // Fallback to any latest subscription with an endDate
+      sub = await tx.subscription.findFirst({
+        where: {
+          userId: targetId,
+          endDate: { not: null },
+        },
+        orderBy: { endDate: "desc" },
+      });
+    }
+
+    if (!sub) {
+      const plan = await getOrCreateDefaultPlan();
+      const now = new Date();
+      const endDate = new Date(now.getTime() + extraDays * 24 * 60 * 60 * 1000);
+      sub = await tx.subscription.create({
+        data: {
+          userId: targetId,
+          planId: plan.id,
+          status: "ACTIVE",
+          startDate: now,
+          endDate,
+          activatedAt: now,
+        },
+      });
+
+      await tx.notification.create({
+        data: {
+          userId: targetId,
+          title: "تم تفعيل اشتراكك!",
+          message: `تم تفعيل اشتراكك لمدة ${extraDays} يومًا إضافيًا حتى ${endDate.toLocaleDateString("ar-EG")}.`,
+          type: "SUBSCRIPTION_EXTENDED",
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: adminId,
+          targetUserId: targetId,
+          action: "SUBSCRIPTION_EXTENDED",
+          entityType: "Subscription",
+          entityId: sub.id,
+          metadata: { extraDays, newEndDate: endDate.toISOString(), reason },
+        },
+      });
+
+      return sub;
+    }
 
     const baseDate = sub.endDate && sub.endDate.getTime() > Date.now() ? sub.endDate : new Date();
     const newEndDate = new Date(baseDate.getTime() + extraDays * 24 * 60 * 60 * 1000);
 
     const updated = await tx.subscription.update({
-      where: { id: subscriptionId },
+      where: { id: sub.id },
       data: {
         endDate: newEndDate,
         status: "ACTIVE",
@@ -354,13 +505,13 @@ export async function extendSubscription(
         targetUserId: sub.userId,
         action: "SUBSCRIPTION_EXTENDED",
         entityType: "Subscription",
-        entityId: subscriptionId,
+        entityId: sub.id,
         metadata: { extraDays, newEndDate: newEndDate.toISOString(), reason },
       },
     });
 
     return updated;
-  });
+  }, DB_TRANSACTION_OPTIONS);
 }
 
 /**
@@ -407,7 +558,7 @@ export async function cancelSubscription(
     });
 
     return updated;
-  });
+  }, DB_TRANSACTION_OPTIONS);
 }
 
 /**
@@ -448,6 +599,7 @@ export async function getAdminAnalytics() {
     recentRegistrations,
     approvedRevenueRaw,
     monthlyRevenueRaw,
+    recentAuditLogs,
   ] = await Promise.all([
     prisma.user.count(),
     prisma.subscription.count({ where: { status: "ACTIVE", endDate: { gt: now } } }),
@@ -468,6 +620,17 @@ export async function getAdminAnalytics() {
       _sum: { amount: true },
       where: { status: "APPROVED", reviewedAt: { gte: thirtyDaysAgo } },
     }),
+    prisma.auditLog.findMany({
+      take: 10,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        action: true,
+        entityType: true,
+        targetUserId: true,
+        createdAt: true,
+      },
+    }),
   ]);
 
   return {
@@ -482,6 +645,7 @@ export async function getAdminAnalytics() {
     recentRegistrations,
     totalRevenueEGP: Number(approvedRevenueRaw._sum.amount ?? 0),
     monthlyRevenueEGP: Number(monthlyRevenueRaw._sum.amount ?? 0),
+    recentAuditLogs,
   };
 }
 

@@ -18,6 +18,8 @@ import {
   CreditCard,
   Loader2,
   Smartphone,
+  MessageCircle,
+  Calendar,
 } from "lucide-react";
 
 interface SubscriptionModalProps {
@@ -29,6 +31,7 @@ interface SubscriptionModalProps {
 export function SubscriptionModal({ isOpen, onClose, user }: SubscriptionModalProps) {
   const queryClient = useQueryClient();
   const [copied, setCopied] = useState(false);
+  const [selectedPlanId, setSelectedPlanId] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<"VODAFONE_CASH" | "INSTAPAY">("VODAFONE_CASH");
   const [transactionRef, setTransactionRef] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -39,6 +42,15 @@ export function SubscriptionModal({ isOpen, onClose, user }: SubscriptionModalPr
     queryFn: () => getSubscriptionInfoFn(),
     enabled: isOpen,
   });
+
+  const plans = info?.plans && info.plans.length > 0 ? info.plans : [
+    { id: "1m", name: "اشتراك شهر", price: 100, durationDays: 30, description: "باقة 30 يوماً متكاملة" },
+    { id: "2m", name: "اشتراك شهرين", price: 200, durationDays: 60, description: "باقة 60 يوماً لرواد الكافيهات" },
+    { id: "3m", name: "اشتراك 3 شهور", price: 280, durationDays: 90, description: "باقة 90 يوماً بتوفير إضافي" },
+    { id: "1y", name: "اشتراك سنوي (VIP)", price: 1000, durationDays: 365, description: "باقة العام الكامل (توفير 200 ج.م)" },
+  ];
+
+  const currentPlan = (plans.find((p) => p.id === selectedPlanId) || plans[0])!;
 
   const submitMutation = useMutation({
     mutationFn: async () => {
@@ -56,6 +68,7 @@ export function SubscriptionModal({ isOpen, onClose, user }: SubscriptionModalPr
 
       return submitSubscriptionPaymentFn({
         data: {
+          planId: currentPlan.id.length > 5 ? currentPlan.id : undefined,
           paymentMethod,
           transactionReference: transactionRef || undefined,
           receiptFilename: selectedFile.name,
@@ -68,6 +81,25 @@ export function SubscriptionModal({ isOpen, onClose, user }: SubscriptionModalPr
       toast.success(res.message);
       queryClient.invalidateQueries({ queryKey: ["current-user"] });
       queryClient.invalidateQueries({ queryKey: ["my-payments"] });
+
+      // Open WhatsApp automatically with user and payment details
+      const adminWhatsApp = "201005209667";
+      const userName = user?.fullName || "عضو كافيلينز";
+      const userPhone = user?.phoneNumber || "غير محدد";
+      const planName = currentPlan.name;
+      const amount = currentPlan.price;
+      const ref = transactionRef ? `\nرقم العملية/المرجع: ${transactionRef}` : "";
+
+      const msg = encodeURIComponent(
+        `مرحباً كافيلينز، قمت بتحويل مبلغ الاشتراك لتفعيل الحساب ☕✨\n\n` +
+        `👤 الاسم: ${userName}\n` +
+        `📱 الهاتف: ${userPhone}\n` +
+        `📦 الباقة: ${planName} (${amount} ج.م)\n` +
+        `💳 طريقة الدفع: ${paymentMethod === "VODAFONE_CASH" ? "فودافون كاش" : "إنستاباي"}${ref}\n\n` +
+        `مرفق صورة إيصال التحويل على الموقع، برجاء تفعيل الاشتراك.`
+      );
+
+      window.open(`https://wa.me/${adminWhatsApp}?text=${msg}`, "_blank");
       onClose();
     },
     onError: (err: any) => {
@@ -79,7 +111,7 @@ export function SubscriptionModal({ isOpen, onClose, user }: SubscriptionModalPr
     const number = info?.officialPaymentNumber || "01005209667";
     navigator.clipboard.writeText(number);
     setCopied(true);
-    toast.success("تم نسخ رقم التحويل بنجاح");
+    toast.success("تم نسخ رقم فودافون كاش بنجاح");
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -102,41 +134,68 @@ export function SubscriptionModal({ isOpen, onClose, user }: SubscriptionModalPr
   };
 
   const paymentNumber = info?.officialPaymentNumber || "01005209667";
-  const planPrice = info?.defaultPlan?.price || 100;
-  const currency = info?.defaultPlan?.currency || "EGP";
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" dir="rtl">
+      <DialogContent className="max-w-lg max-h-[92vh] overflow-y-auto" dir="rtl">
         <DialogHeader className="text-center">
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
             <Sparkles className="h-6 w-6" />
           </div>
           <DialogTitle className="text-2xl font-bold font-display text-foreground">
-            الاشتراك في باقة CaféLens المميزة
+            باقات الاشتراك في CaféLens
           </DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground">
-            استمتع بكافة مميزات المنصة وحاسبة الميزانية المتقدمة واستكشاف الكافيهات بدون قيود
+          <DialogDescription className="text-xs sm:text-sm text-muted-foreground">
+            اختر باقتك المفضلة، حوّل المبلغ إلى فودافون كاش، وسيتم فتح الخدمة والتواصل معك فوراً
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-5 py-2">
-          {/* PLAN CARD */}
-          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 text-center">
-            <h3 className="font-semibold text-foreground text-lg">الباقة الشهرية الكاملة</h3>
-            <div className="mt-1 flex items-baseline justify-center gap-1">
-              <span className="text-3xl font-extrabold text-primary">{planPrice}</span>
-              <span className="text-sm font-medium text-muted-foreground">{currency} / شهرياً</span>
+        <div className="space-y-4 py-2">
+          {/* PLANS SELECTION */}
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold text-foreground">اختر الباقة المناسبة لك:</Label>
+            <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
+              {plans.map((p) => {
+                const isSelected = (selectedPlanId ? p.id === selectedPlanId : p === plans[0]);
+                const isYearly = p.durationDays >= 365;
+
+                return (
+                  <div
+                    key={p.id}
+                    onClick={() => setSelectedPlanId(p.id)}
+                    className={`relative flex flex-col justify-between rounded-xl border p-3 cursor-pointer transition-all ${
+                      isSelected
+                        ? "border-primary bg-primary/10 shadow-sm ring-1 ring-primary/40 font-bold"
+                        : "border-border/70 bg-card/40 hover:border-primary/40 hover:bg-card/70"
+                    }`}
+                  >
+                    {isYearly && (
+                      <span className="absolute -top-2 left-2 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 px-2 py-0.5 text-[9px] font-bold text-black shadow">
+                        الأوفر والأفضل
+                      </span>
+                    )}
+                    <div>
+                      <h4 className="text-xs sm:text-sm text-foreground">{p.name}</h4>
+                      <p className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">
+                        {p.durationDays} يوم
+                      </p>
+                    </div>
+                    <div className="mt-2 text-left" dir="ltr">
+                      <span className="text-base sm:text-lg font-extrabold text-primary">{p.price}</span>
+                      <span className="text-[10px] text-muted-foreground ml-1">ج.م</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <p className="mt-2 text-xs text-muted-foreground">صلاحية لمدة 30 يوماً تبدأ فور اعتماد الإيصال</p>
           </div>
 
           {/* PAYMENT INSTRUCTIONS */}
-          <div className="rounded-xl border border-border/80 bg-card/60 p-4 space-y-3">
+          <div className="rounded-xl border border-border/80 bg-card/60 p-3.5 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">رقم التحويل المعتمد:</span>
+              <span className="text-xs font-medium text-muted-foreground">رقم التحويل (فودافون كاش):</span>
               <div className="flex items-center gap-2">
-                <span className="font-mono text-base font-bold text-foreground" dir="ltr">
+                <span className="font-mono text-sm sm:text-base font-bold text-foreground tracking-wider" dir="ltr">
                   {paymentNumber}
                 </span>
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCopy}>
@@ -145,15 +204,20 @@ export function SubscriptionModal({ isOpen, onClose, user }: SubscriptionModalPr
               </div>
             </div>
 
+            <div className="flex items-center justify-between text-xs pt-1 border-t border-border/40">
+              <span className="text-muted-foreground">المبلغ المطلوب تحويله:</span>
+              <span className="font-bold text-primary text-sm">{currentPlan.price} ج.م</span>
+            </div>
+
             <div className="space-y-1.5 pt-2 border-t border-border/50">
               <Label className="text-xs text-muted-foreground">طريقة التحويل المستخدمة:</Label>
               <RadioGroup
                 value={paymentMethod}
                 onValueChange={(val) => setPaymentMethod(val as any)}
-                className="grid grid-cols-2 gap-3"
+                className="grid grid-cols-2 gap-2"
               >
                 <div
-                  className={`flex items-center justify-between rounded-lg border p-3 cursor-pointer transition ${
+                  className={`flex items-center justify-between rounded-lg border p-2.5 cursor-pointer transition ${
                     paymentMethod === "VODAFONE_CASH"
                       ? "border-primary bg-primary/5 text-foreground"
                       : "border-border text-muted-foreground"
@@ -166,11 +230,11 @@ export function SubscriptionModal({ isOpen, onClose, user }: SubscriptionModalPr
                       فودافون كاش
                     </Label>
                   </div>
-                  <Smartphone className="h-4 w-4" />
+                  <Smartphone className="h-4 w-4 text-primary" />
                 </div>
 
                 <div
-                  className={`flex items-center justify-between rounded-lg border p-3 cursor-pointer transition ${
+                  className={`flex items-center justify-between rounded-lg border p-2.5 cursor-pointer transition ${
                     paymentMethod === "INSTAPAY"
                       ? "border-primary bg-primary/5 text-foreground"
                       : "border-border text-muted-foreground"
@@ -183,17 +247,17 @@ export function SubscriptionModal({ isOpen, onClose, user }: SubscriptionModalPr
                       إنستاباي InstaPay
                     </Label>
                   </div>
-                  <CreditCard className="h-4 w-4" />
+                  <CreditCard className="h-4 w-4 text-primary" />
                 </div>
               </RadioGroup>
             </div>
           </div>
 
           {/* FORM: REFERENCE & FILE */}
-          <div className="space-y-4">
-            <div className="space-y-1.5">
+          <div className="space-y-3">
+            <div className="space-y-1">
               <Label htmlFor="ref-no" className="text-xs text-muted-foreground">
-                رقم العملية أو المرجع (من رسالة التأكيد):
+                رقم العملية أو المرجع (اختياري من رسالة فودافون كاش):
               </Label>
               <Input
                 id="ref-no"
@@ -201,19 +265,19 @@ export function SubscriptionModal({ isOpen, onClose, user }: SubscriptionModalPr
                 value={transactionRef}
                 onChange={(e) => setTransactionRef(e.target.value)}
                 dir="ltr"
-                className="text-right"
+                className="text-right text-xs"
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">صورة إيصال التحويل أو لقطة الشاشة:</Label>
-              <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/80 p-4 transition hover:border-primary/50">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">صورة إيصال التحويل (سكرين شوت من الهاتف):</Label>
+              <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/80 p-3 transition hover:border-primary/50">
                 {previewUrl ? (
                   <div className="relative w-full text-center">
                     <img
                       src={previewUrl}
                       alt="معاينة الإيصال"
-                      className="mx-auto max-h-48 rounded-lg object-contain shadow-sm"
+                      className="mx-auto max-h-40 rounded-lg object-contain shadow-sm"
                     />
                     <Button
                       variant="outline"
@@ -228,10 +292,10 @@ export function SubscriptionModal({ isOpen, onClose, user }: SubscriptionModalPr
                     </Button>
                   </div>
                 ) : (
-                  <label className="flex flex-col items-center justify-center w-full cursor-pointer py-3">
-                    <UploadCloud className="h-8 w-8 text-muted-foreground/60 mb-2" />
-                    <span className="text-xs font-semibold text-foreground">اضغط لرفع صورة الإيصال</span>
-                    <span className="text-[11px] text-muted-foreground mt-1">PNG أو JPG حتى 5 ميجابايت</span>
+                  <label className="flex flex-col items-center justify-center w-full cursor-pointer py-2">
+                    <UploadCloud className="h-7 w-7 text-primary/70 mb-1.5" />
+                    <span className="text-xs font-semibold text-foreground">اضغط هنا لرفع صورة الإيصال</span>
+                    <span className="text-[10px] text-muted-foreground mt-0.5">PNG أو JPG (حتى 5 ميجابايت)</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -245,19 +309,22 @@ export function SubscriptionModal({ isOpen, onClose, user }: SubscriptionModalPr
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:justify-start">
+        <DialogFooter className="gap-2 sm:justify-start pt-1">
           <Button
-            className="w-full sm:w-auto font-medium"
+            className="w-full sm:w-auto font-semibold flex items-center justify-center gap-2"
             disabled={!selectedFile || submitMutation.isPending}
             onClick={() => submitMutation.mutate()}
           >
             {submitMutation.isPending ? (
               <>
-                <Loader2 className="ml-2 h-4 w-4 animate-spin" />
-                جارٍ إرسال الإيصال...
+                <Loader2 className="h-4 w-4 animate-spin" />
+                جارٍ تأكيد الاشتراك...
               </>
             ) : (
-              "إرسال الإيصال لتفعيل الاشتراك"
+              <>
+                <MessageCircle className="h-4 w-4" />
+                تأكيد الاشتراك والدفع وفتح واتساب
+              </>
             )}
           </Button>
           <Button variant="outline" onClick={onClose}>

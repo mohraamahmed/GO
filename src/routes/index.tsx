@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { getCurrentUserFn, logoutUserFn } from "@/lib/api-auth.functions";
+import { useGlobalUI } from "@/context/GlobalUIContext";
 import { SubscriptionModal } from "@/components/SubscriptionModal";
 import { toast } from "sonner";
 import gsap from "gsap";
@@ -126,13 +127,13 @@ function NavMenu({
 
   return (
     <div className="relative">
-      <button onClick={() => setOpen(!open)} className="nav-item glass grid h-12 w-12 place-items-center rounded-full transition hover:shadow-glow" aria-label="القائمة" aria-expanded={open}>
+      <button onClick={() => setOpen(!open)} className="nav-item glass grid h-10 w-10 sm:h-12 sm:w-12 place-items-center rounded-full transition hover:shadow-glow" aria-label="القائمة" aria-expanded={open}>
         {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </button>
       {open && (
         <>
-          <button aria-hidden className="fixed inset-0 z-40 cursor-default" onClick={() => setOpen(false)} />
-          <nav className="glass absolute left-0 top-14 z-50 w-72 rounded-2xl p-2 shadow-glow" aria-label="التنقل الرئيسي" dir="rtl">
+          <button aria-hidden className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm cursor-default" onClick={() => setOpen(false)} />
+          <nav className="absolute right-0 top-12 sm:top-14 z-50 w-72 max-w-[calc(100vw-2rem)] rounded-2xl p-2 bg-[#1a120c] border border-border/80 shadow-2xl" aria-label="التنقل الرئيسي" dir="rtl">
             {/* USER PROFILE / AUTH SECTION */}
             {user ? (
               <div className="border-b border-border/50 p-3 mb-1.5 bg-card/40 rounded-xl">
@@ -235,19 +236,27 @@ function Index() {
   const [mood, setMood] = useState<number | null>(null);
   const moodRef = useRef(mood);
   moodRef.current = mood;
-  const [isCompareOpen, setIsCompareOpen] = useState(false);
-  const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
+  const { openFavorites, openCompare, openSubscription } = useGlobalUI();
   const { data: allCafes = [] } = useSuspenseQuery(cafesQuery);
+  const { data: authData } = useQuery({
+    queryKey: ["current-user"],
+    queryFn: () => getCurrentUserFn(),
+    staleTime: 60_000,
+  });
+  const user = authData?.user;
+  const subscription = authData?.subscription;
 
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger);
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-      tl.from(".hero-canvas", { opacity: 0, duration: 0.6 })
-        .from(".nav-item", { y: -20, opacity: 0, stagger: 0.08, duration: 0.5, clearProps: "all" }, "-=0.4")
-        .from(".hero-line", { y: 40, opacity: 0, stagger: 0.1, duration: 0.7, clearProps: "all" }, "-=0.4")
-        .from(".hero-sub", { y: 20, opacity: 0, duration: 0.6, clearProps: "all" }, "-=0.3")
-        .from(".hero-rule", { scaleX: 0, transformOrigin: "right", duration: 0.6, clearProps: "all" }, "-=0.3");
+      tl.fromTo(".hero-canvas", { opacity: 0 }, { opacity: 1, duration: 0.6, clearProps: "all" })
+        .fromTo(".nav-item", { y: -20, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.08, duration: 0.5, clearProps: "all" }, "-=0.4")
+        .fromTo(".hero-line", { y: 35, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.1, duration: 0.6, clearProps: "all" }, "-=0.3")
+        .fromTo(".hero-sub", { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, clearProps: "all" }, "-=0.3")
+        .fromTo(".hero-rule", { scaleX: 0, transformOrigin: "right" }, { scaleX: 1, duration: 0.5, clearProps: "all" }, "-=0.2")
+        .fromTo(".mood-picker-box", { y: 25, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, clearProps: "all" }, "-=0.2")
+        .fromTo(".mood", { y: 15, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.06, duration: 0.5, clearProps: "all" }, "-=0.3");
       gsap.to(".hero-text", {
         yPercent: -30, opacity: 0.2, ease: "none",
         scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: true },
@@ -255,7 +264,6 @@ function Index() {
       gsap.utils.toArray<HTMLElement>(".reveal").forEach((el) =>
         gsap.from(el, { y: 60, opacity: 0, duration: 1, ease: "power3.out", scrollTrigger: { trigger: el, start: "top bottom-=40", once: true } }),
       );
-      gsap.from(".mood", { y: 18, opacity: 0, stagger: 0.07, duration: 0.75, ease: "power3.out", clearProps: "transform", scrollTrigger: { trigger: ".moods", start: "top bottom", once: true } });
       gsap.from(".cat", { y: 50, opacity: 0, stagger: 0.1, duration: 0.9, ease: "power3.out", clearProps: "transform,opacity", scrollTrigger: { trigger: ".cats", start: "top bottom-=40", once: true } });
       addEventListener("load", () => ScrollTrigger.refresh());
     }, root);
@@ -304,8 +312,8 @@ function Index() {
 
   return (
     <div ref={root} className="min-h-screen overflow-hidden bg-background text-foreground">
-      {/* HERO */}
-      <section className="hero relative h-[100svh] min-h-[640px]">
+      {/* HERO & FIRST SCREEN VIEWPORT */}
+      <section className="hero relative h-[100svh] min-h-[100svh] overflow-hidden flex flex-col justify-between">
         <div className="hero-canvas absolute inset-0">
           <HeroVideoBackground
             posterSrc="/hero-poster.webp"
@@ -313,91 +321,70 @@ function Index() {
             videoWebmSrc="/hero-video.webm"
           />
         </div>
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-background/40 to-background/85" />
-        <div className="bg-fade absolute inset-x-0 bottom-0 h-48" />
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-background/40 to-background/85 pointer-events-none" />
+        <div className="bg-fade absolute inset-x-0 bottom-0 h-44 sm:h-56 pointer-events-none" />
 
-        <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-5 pt-6" dir="ltr">
-          <div className="nav-item flex items-center gap-3">
-            <Aperture className="h-11 w-11 text-primary" strokeWidth={1.5} />
-            <div>
-              <div className="font-latin text-3xl font-semibold leading-none">CaféLens</div>
-              <div className="mt-1 text-[9px] tracking-[0.3em] text-muted-foreground">DISCOVER BEYOND THE ORDINARY.</div>
+        {/* Top Section: Hero Typography */}
+        <div className="w-full">
+          <div className="hero-text relative z-10 mx-auto mt-6 sm:mt-12 md:mt-20 max-w-6xl px-4 sm:px-5">
+            <h1 className="font-display font-bold leading-tight">
+              <span className="block overflow-hidden"><span className="hero-line block text-4xl sm:text-5xl md:text-7xl">اكتشف</span></span>
+              <span className="block overflow-hidden pb-1 sm:pb-3"><span className="hero-line text-gold block text-5xl sm:text-6xl md:text-8xl">مكانك المثالي</span></span>
+            </h1>
+            <p className="hero-sub mt-2 sm:mt-3 max-w-sm text-sm sm:text-base md:text-xl text-muted-foreground">واعرف ميزانيتك، واستمتع بخروجة على مزاجك.</p>
+            <div className="hero-rule bg-gold mt-2.5 sm:mt-5 h-px w-28 sm:w-40" />
+          </div>
+        </div>
+
+        {/* Bottom Section: Mood Picker anchored at the bottom of the first screen */}
+        <div className="relative z-20 mx-auto w-full max-w-6xl px-3 sm:px-5 pb-3.5 sm:pb-6">
+          <section className="mood-picker-box mood-picker relative overflow-hidden" aria-label="اختر مزاجك">
+            <div className="mood-content relative">
+              <div className="flex items-center justify-between">
+                <h2 className="mood-heading flex items-center gap-2 font-display text-base sm:text-lg md:text-xl">اختر مزاجك:</h2>
+                {mood != null && (
+                  <button onClick={() => setMood(null)} className="flex items-center gap-1 text-xs sm:text-sm text-primary">
+                    <X className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> كل الأجواء
+                  </button>
+                )}
+              </div>
+              <div ref={strip} className="moods mood-strip grid grid-cols-5 gap-1 sm:gap-2 p-1 sm:p-2" role="group" aria-label="المزاج">
+                <span ref={glow} className="mood-glow" aria-hidden="true" />
+                {MOODS.map((m, i) => {
+                  const Icon = moodIcons[i]!;
+                  return (
+                    <Button
+                      key={m.key}
+                      variant="ghost"
+                      aria-pressed={mood === i}
+                      onClick={(e) => pick(i, e.currentTarget)}
+                      className="mood mood-option flex flex-col items-center justify-center py-2 sm:py-3 px-0.5 sm:px-2 h-auto min-h-[58px] sm:min-h-[70px]"
+                    >
+                      <span className="mood-ico text-primary mb-1"><Icon className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={1.4} /></span>
+                      <span className="text-[10px] sm:text-xs md:text-sm font-medium leading-tight text-center">{m.label}</span>
+                    </Button>
+                  );
+                })}
+              </div>
+              {mood != null && <p className="mt-2.5 sm:mt-3 text-xs sm:text-sm text-muted-foreground">{MOODS[mood]!.desc}</p>}
             </div>
-          </div>
-          <div className="flex gap-3">
-            <NavMenu
-              onOpenCompare={() => setIsCompareOpen(true)}
-              onOpenFavorites={() => setIsFavoritesOpen(true)}
-            />
-          </div>
-        </header>
-
-        <div className="hero-text relative z-10 mx-auto mt-16 max-w-6xl px-5 md:mt-24">
-          <h1 className="font-display font-bold leading-tight">
-            <span className="block overflow-hidden"><span className="hero-line block text-5xl md:text-7xl">اكتشف</span></span>
-            <span className="block overflow-hidden pb-3"><span className="hero-line text-gold block text-6xl md:text-8xl">مكانك المثالي</span></span>
-          </h1>
-          <p className="hero-sub mt-4 max-w-sm text-lg text-muted-foreground md:text-xl">واعرف ميزانيتك، واستمتع بخروجة على مزاجك.</p>
-          <div className="hero-rule bg-gold mt-6 h-px w-40" />
+          </section>
         </div>
       </section>
 
-      <main id="areas" className="relative z-10 mx-auto -mt-40 w-full max-w-6xl space-y-12 sm:space-y-14 px-3 sm:px-5 pb-10">
-        {/* MOODS */}
-        <section className="reveal mood-picker relative overflow-hidden" aria-label="اختر مزاجك">
-          <div className="mood-content relative">
-            <div className="flex items-center justify-between">
-              <h2 className="mood-heading flex items-center gap-2 font-display">اختر مزاجك:</h2>
-              {mood != null && (
-                <button onClick={() => setMood(null)} className="flex items-center gap-1 text-sm text-primary">
-                  <X className="h-3.5 w-3.5" /> كل الأجواء
-                </button>
-              )}
-            </div>
-            <div ref={strip} className="moods mood-strip grid grid-cols-5" role="group" aria-label="المزاج">
-              <span ref={glow} className="mood-glow" aria-hidden="true" />
-              {MOODS.map((m, i) => {
-                const Icon = moodIcons[i]!;
-                return (
-                  <Button
-                    key={m.key}
-                    variant="ghost"
-                    aria-pressed={mood === i}
-                    onClick={(e) => pick(i, e.currentTarget)}
-                    className="mood mood-option"
-                  >
-                    <span className="mood-ico"><Icon strokeWidth={1.4} /></span>
-                    <span>{m.label}</span>
-                  </Button>
-                );
-              })}
-            </div>
-            {mood != null && <p className="mt-3 text-sm text-muted-foreground">{MOODS[mood]!.desc}</p>}
-          </div>
-        </section>
-
+      {/* MAIN CONTENT (SCROLLABLE BELOW THE INITIAL 100svh FOLD) */}
+      <main id="areas" className="relative z-10 mx-auto w-full max-w-6xl space-y-12 sm:space-y-16 px-3 sm:px-5 pt-8 sm:pt-14 pb-10">
         {/* CALCULATOR */}
         <CalculatorSection
-          onOpenCompare={() => setIsCompareOpen(true)}
-          onOpenFavorites={() => setIsFavoritesOpen(true)}
+          onOpenCompare={openCompare}
+          onOpenFavorites={openFavorites}
+          user={user}
+          subscription={subscription}
+          onRequestSubscription={openSubscription}
         />
 
         <Explore mood={mood} area={area} />
       </main>
-
-      {/* Comparison Modal */}
-      <CafeComparisonModal
-        isOpen={isCompareOpen}
-        onClose={() => setIsCompareOpen(false)}
-        allCafes={allCafes}
-      />
-
-      {/* Favorites Drawer */}
-      <FavoritesDrawer
-        isOpen={isFavoritesOpen}
-        onClose={() => setIsFavoritesOpen(false)}
-        allCafes={allCafes}
-      />
     </div>
   );
 }
@@ -444,11 +431,19 @@ function CafeCard({ c, reason, priority = false }: { c: CafeListItem; reason?: s
 function CalculatorSection({
   onOpenCompare,
   onOpenFavorites,
+  user,
+  subscription,
+  onRequestSubscription,
 }: {
   onOpenCompare?: () => void;
   onOpenFavorites?: () => void;
+  user?: any;
+  subscription?: any;
+  onRequestSubscription?: () => void;
 }) {
-  const { data: all } = useSuspenseQuery(cafesQuery);
+  const { data: allRaw } = useSuspenseQuery(cafesQuery);
+  const all = allRaw ?? [];
+  const isSubscribed = Boolean(subscription?.hasActiveSubscription || user?.role === "ADMIN");
   const [selectedArea, setSelectedArea] = useState<"all" | "sheikh_zayed" | "tagamoa">("all");
   const [itemType, setItemType] = useState<"combo" | "drink" | "food">("combo");
   const [selectedFacilities, setSelectedFacilities] = useState<FacilityKey[]>([]);
@@ -486,13 +481,14 @@ function CalculatorSection({
 
   // Filter cafes by selected area
   const areaCafes = useMemo(() => {
+    if (!all || all.length === 0) return [];
     if (selectedArea === "sheikh_zayed") {
       return all.filter((c) => c.area_class === "sheikh_zayed" || (c.area && c.area.includes("زايد")));
     }
     if (selectedArea === "tagamoa") {
       return all.filter(
         (c) =>
-          c.area_class.startsWith("new_cairo") ||
+          (c.area_class ?? "").startsWith("new_cairo") ||
           c.area_class === "fifth_settlement" ||
           (c.area && (c.area.includes("التجمع") || c.area.includes("القاهرة الجديدة")))
       );
@@ -540,8 +536,23 @@ function CalculatorSection({
       const found = scoredCafes.find((sc) => sc.cafe.id === cafeId);
       if (found) return found;
     }
-    return scoredCafes[0] ?? calculateCafeScoreWithFacilities(all[0]!, budgetPerPerson, itemType, selectedFacilities);
-  }, [scoredCafes, cafeId, all, budgetPerPerson, itemType, selectedFacilities]);
+    return scoredCafes[0] ?? null;
+  }, [scoredCafes, cafeId]);
+
+  // Guard: show empty state if no cafes loaded yet
+  if (!activeScoredCafe) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center rounded-3xl border border-border/40 bg-card/30 p-8 text-center" dir="rtl">
+        <div>
+          <div className="text-4xl mb-4">☕</div>
+          <h3 className="text-lg font-bold text-foreground">لا توجد كافيهات حتى الآن</h3>
+          <p className="mt-2 text-sm text-muted-foreground">
+            سيتم إضافة بيانات الكافيهات قريباً. تابعنا!
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const activeCafe = activeScoredCafe.cafe;
   const activeVerification = getCafeVerification(activeCafe);
@@ -1222,27 +1233,46 @@ function CalculatorSection({
               </div>
 
               {/* PROPOSED ORDER (WHAT TO GET) */}
-              <div className="rounded-2xl border border-border/40 bg-card/50 p-3 sm:p-3.5 space-y-2">
-                <div className="flex items-center justify-between text-xs font-semibold text-foreground">
-                  <span className="flex items-center gap-1.5">
-                    <Coffee className="h-4 w-4 text-primary" />
-                    تقدر تطلب إيه بميزانيتك ({people > 1 ? `${people} أفراد` : "فرد واحد"}):
-                  </span>
-                  <span className="text-[11px] text-muted-foreground">شامل الضريبة والخدمة</span>
-                </div>
+              {isSubscribed ? (
+                <div className="rounded-2xl border border-border/40 bg-card/50 p-3 sm:p-3.5 space-y-2">
+                  <div className="flex items-center justify-between text-xs font-semibold text-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <Coffee className="h-4 w-4 text-primary" />
+                      تقدر تطلب إيه بميزانيتك ({people > 1 ? `${people} أفراد` : "فرد واحد"}):
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">شامل الضريبة والخدمة</span>
+                  </div>
 
-                <div className="space-y-1.5">
-                  {smartRecommendation.items.slice(0, 2).map((item) => (
-                    <div key={item.id} className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-background/50 border border-border/30">
-                      <div className="flex items-center gap-2 truncate">
-                        <Check className="h-3.5 w-3.5 text-primary shrink-0" />
-                        <span className="font-medium text-foreground truncate" dir="auto">{item.name}</span>
+                  <div className="space-y-1.5">
+                    {smartRecommendation.items.slice(0, 2).map((item) => (
+                      <div key={item.id} className="flex items-center justify-between text-xs py-1.5 px-3 rounded-xl bg-background/50 border border-border/30">
+                        <div className="flex items-center gap-2 truncate">
+                          <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                          <span className="font-medium text-foreground truncate" dir="auto">{item.name}</span>
+                        </div>
+                        <span className="font-bold text-foreground shrink-0">{item.price} ج.م</span>
                       </div>
-                      <span className="font-bold text-foreground shrink-0">{item.price} ج.م</span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-950/25 via-background to-background p-4 text-center">
+                  <div className="flex flex-col items-center">
+                    <Crown className="h-6 w-6 text-primary mb-1 animate-pulse" />
+                    <h5 className="font-bold text-xs text-foreground">المنيو الكامل وحاسبة الفاتورة مقفولة</h5>
+                    <p className="text-[11px] text-muted-foreground mt-1 max-w-xs">
+                      اشترك الآن بـ 100 ج.م/شهر أو 1000 ج.م/سنة لفتح تفاصيل الأصناف وحاسبة الميزانية الدقيقة.
+                    </p>
+                    <Button
+                      size="sm"
+                      onClick={onRequestSubscription}
+                      className="mt-3 text-xs bg-gold text-primary-foreground font-bold shadow-glow"
+                    >
+                      اشترك الآن وافتح الخدمة
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               {/* PRIMARY ACTION BUTTONS */}
               <div className="space-y-2 pt-1">

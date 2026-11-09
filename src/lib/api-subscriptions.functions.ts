@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import crypto from "node:crypto";
 import { z } from "zod";
 import { prisma } from "./prisma";
 import {
@@ -23,8 +24,8 @@ export const getSubscriptionInfoFn = createServerFn({ method: "GET" }).handler(a
   return {
     officialPaymentNumber: PAYMENT_CONFIG.OFFICIAL_PAYMENT_NUMBER,
     supportedMethods: PAYMENT_CONFIG.SUPPORTED_METHODS,
-    defaultPlan,
-    plans: allActivePlans,
+    defaultPlan: { ...defaultPlan, price: Number(defaultPlan.price) },
+    plans: allActivePlans.map((p) => ({ ...p, price: Number(p.price) })),
   };
 });
 
@@ -49,11 +50,11 @@ export const submitSubscriptionPaymentFn = createServerFn({ method: "POST" })
     // Decode base64 receipt
     let base64Clean = data.receiptBase64;
     if (base64Clean.includes(",")) {
-      base64Clean = base64Clean.split(",")[1];
+      base64Clean = base64Clean.split(",")[1] || "";
     }
     const fileBuffer = Buffer.from(base64Clean, "base64");
 
-    // Save receipt to private storage
+    // Save receipt to private storage with magic-byte verification
     const uploadResult = await saveReceiptFile({
       filename: data.receiptFilename,
       mimeType: data.receiptMimeType,
@@ -63,9 +64,9 @@ export const submitSubscriptionPaymentFn = createServerFn({ method: "POST" })
     // Create payment request with database transaction
     const { payment, subscription } = await createPaymentRequest({
       userId: ctx.user.id,
-      planId: data.planId,
+      planId: data.planId || undefined,
       paymentMethod: data.paymentMethod,
-      transactionReference: data.transactionReference,
+      transactionReference: data.transactionReference || undefined,
       receipt: uploadResult,
     });
 
@@ -79,8 +80,9 @@ export const submitSubscriptionPaymentFn = createServerFn({ method: "POST" })
         entityId: payment.id,
         metadata: {
           paymentMethod: data.paymentMethod,
-          amount: payment.amount,
+          amount: Number(payment.amount),
           reference: data.transactionReference,
+          correlationId: crypto.randomUUID(),
         },
         ipAddress: ctx.clientIp || null,
       },
@@ -106,7 +108,7 @@ export const getMyPaymentsFn = createServerFn({ method: "GET" })
       where: { userId: ctx.user.id },
       orderBy: { createdAt: "desc" },
       include: {
-        receipt: {
+        receipts: {
           select: {
             id: true,
             originalFilename: true,
@@ -124,7 +126,46 @@ export const getMyPaymentsFn = createServerFn({ method: "GET" })
     const status = await getUserSubscriptionStatus(ctx.user.id);
 
     return {
-      payments,
+      payments: payments.map((p) => ({
+        id: p.id,
+        userId: p.userId,
+        amount: Number(p.amount),
+        currency: p.currency,
+        paymentMethod: p.paymentMethod,
+        transactionReference: p.transactionReference,
+        status: p.status,
+        createdAt: p.createdAt.toISOString(),
+        receipt: p.receipts[0]
+          ? {
+              id: p.receipts[0].id,
+              originalFilename: p.receipts[0].originalFilename,
+              mimeType: p.receipts[0].mimeType,
+              fileSize: p.receipts[0].fileSize,
+              uploadedAt: p.receipts[0].uploadedAt.toISOString(),
+            }
+          : null,
+        subscription: p.subscription
+          ? {
+              id: p.subscription.id,
+              userId: p.subscription.userId,
+              planId: p.subscription.planId,
+              status: p.subscription.status,
+              startDate: p.subscription.startDate ? p.subscription.startDate.toISOString() : null,
+              endDate: p.subscription.endDate ? p.subscription.endDate.toISOString() : null,
+              plan: p.subscription.plan
+                ? {
+                    id: p.subscription.plan.id,
+                    name: p.subscription.plan.name,
+                    description: p.subscription.plan.description,
+                    price: Number(p.subscription.plan.price),
+                    currency: p.subscription.plan.currency,
+                    durationDays: p.subscription.plan.durationDays,
+                    isActive: p.subscription.plan.isActive,
+                  }
+                : null,
+            }
+          : null,
+      })),
       currentStatus: status,
     };
   });
@@ -161,4 +202,39 @@ export const markNotificationReadFn = createServerFn({ method: "POST" })
     });
 
     return { success: true };
+  });
+
+/**
+ * User: View own uploaded receipt safely (Zero-Trust IDOR Prevention)
+ */
+export const getUserReceiptImageFn = createServerFn({ method: "POST" })
+  .middleware([requireAuthMiddleware])
+  .validator((data: unknown) => z.object({ storageKey: z.string().min(1) }).parse(data))
+  .handler(async ({ data, context }) => {
+    const ctx = context as unknown as AuthenticatedContext;
+
+    const receipt = await prisma.paymentReceipt.findUnique({
+      where: { storageKey: data.storageKey },
+      include: { payment: true },
+    });
+
+    if (!receipt) {
+      throw new Error("سجل الإيصال غير موجود في النظام");
+    }
+
+    // Strict Ownership verification (IDOR protection)
+    if (receipt.payment.userId !== ctx.user.id && ctx.user.role !== "ADMIN") {
+      throw new Error("FORBIDDEN: غير مصرح لك باستعراض هذا الإيصال");
+    }
+
+    const { readReceiptFile } = await import("./storage-service");
+    const file = await readReceiptFile(data.storageKey);
+    if (!file) {
+      throw new Error("ملف الإيصال غير متوفر على السيرفر");
+    }
+
+    const base64 = file.buffer.toString("base64");
+    return {
+      dataUrl: `data:${file.contentType};base64,${base64}`,
+    };
   });

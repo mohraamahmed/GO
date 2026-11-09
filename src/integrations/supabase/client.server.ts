@@ -29,8 +29,8 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
   };
 }
 
-const DEFAULT_SUPABASE_URL = "https://c--1301ac32-49dd-4327-b443-c12ce8223ab8-prod.lovable.cloud";
-const DEFAULT_SUPABASE_KEY = "sb_publishable_8SG4MA-eCYnXU8tmjHQbmg_r5ScyDwB";
+const DEFAULT_SUPABASE_URL = "https://buhbubmzprbggxtltteb.supabase.co";
+const DEFAULT_SUPABASE_KEY = "sb_publishable_5kPsk_UJcA8Y6Qd4dDnmKA_5fhxYRRL";
 
 function createSupabaseAdminClient() {
   const SUPABASE_URL =

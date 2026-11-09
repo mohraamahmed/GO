@@ -5,7 +5,9 @@ import type { User, Session } from "@prisma/client";
 
 const SESSION_DURATION_DAYS = 30;
 const MAX_FAILED_ATTEMPTS = 5;
+const MAX_IP_FAILED_ATTEMPTS = 15;
 const LOCKOUT_MINUTES = 15;
+const MAX_CONCURRENT_SESSIONS_PER_USER = 5;
 
 /**
  * Validates and normalizes Egyptian phone numbers.
@@ -42,6 +44,22 @@ export function isValidEgyptianPhone(phone: string): boolean {
   return normalizeEgyptianPhone(phone) !== null;
 }
 
+/**
+ * Password Policy: Minimum 8 characters, at least 1 letter and 1 number.
+ */
+export function validatePasswordStrength(password: string): { valid: boolean; message?: string } {
+  if (!password || password.length < 8) {
+    return { valid: false, message: "كلمة المرور يجب أن لا تقل عن 8 أحرف" };
+  }
+  if (!/[a-zA-Z\u0600-\u06FF]/.test(password)) {
+    return { valid: false, message: "كلمة المرور يجب أن تحتوي على حرف واحد على الأقل" };
+  }
+  if (!/[0-9]/.test(password)) {
+    return { valid: false, message: "كلمة المرور يجب أن تحتوي على رقم واحد على الأقل" };
+  }
+  return { valid: true };
+}
+
 export async function hashPassword(password: string): Promise<string> {
   const salt = await bcrypt.genSalt(12);
   return bcrypt.hash(password, salt);
@@ -55,13 +73,36 @@ export function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
+/**
+ * Dual-layer rate limiting: Account-level and IP-level throttling.
+ */
 export async function checkRateLimit(
   phoneNumber: string,
   ipAddress?: string
-): Promise<{ allowed: boolean; remainingAttempts?: number; retryAfterMinutes?: number }> {
+): Promise<{ allowed: boolean; remainingAttempts?: number; retryAfterMinutes?: number; reason?: string }> {
   const since = new Date(Date.now() - LOCKOUT_MINUTES * 60 * 1000);
 
-  const failedAttempts = await prisma.loginAttempt.count({
+  // 1. Check IP-level spray attacks
+  if (ipAddress) {
+    const failedByIp = await prisma.loginAttempt.count({
+      where: {
+        ipAddress,
+        success: false,
+        createdAt: { gte: since },
+      },
+    });
+
+    if (failedByIp >= MAX_IP_FAILED_ATTEMPTS) {
+      return {
+        allowed: false,
+        retryAfterMinutes: LOCKOUT_MINUTES,
+        reason: "IP_LOCKOUT",
+      };
+    }
+  }
+
+  // 2. Check Account-level targeted brute force
+  const failedByPhone = await prisma.loginAttempt.count({
     where: {
       phoneNumber,
       success: false,
@@ -69,16 +110,17 @@ export async function checkRateLimit(
     },
   });
 
-  if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
+  if (failedByPhone >= MAX_FAILED_ATTEMPTS) {
     return {
       allowed: false,
       retryAfterMinutes: LOCKOUT_MINUTES,
+      reason: "ACCOUNT_LOCKOUT",
     };
   }
 
   return {
     allowed: true,
-    remainingAttempts: MAX_FAILED_ATTEMPTS - failedAttempts,
+    remainingAttempts: MAX_FAILED_ATTEMPTS - failedByPhone,
   };
 }
 
@@ -103,7 +145,24 @@ export async function recordLoginAttempt(
 export async function createSession(
   userId: string
 ): Promise<{ token: string; expiresAt: Date; session: Session }> {
-  // Generate high-entropy 256-bit random session token
+  // 1. Session Limiting: keep only newest N active sessions per user
+  try {
+    const userSessions = await prisma.session.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (userSessions.length >= MAX_CONCURRENT_SESSIONS_PER_USER) {
+      const toDelete = userSessions.slice(MAX_CONCURRENT_SESSIONS_PER_USER - 1);
+      await prisma.session.deleteMany({
+        where: { id: { in: toDelete.map((s) => s.id) } },
+      });
+    }
+  } catch (err) {
+    console.error("Session limit cleanup warning:", err);
+  }
+
+  // 2. Generate high-entropy 256-bit cryptographically secure random session token
   const token = crypto.randomBytes(32).toString("hex");
   const sessionTokenHash = hashToken(token);
   const expiresAt = new Date(Date.now() + SESSION_DURATION_DAYS * 24 * 60 * 60 * 1000);
@@ -135,7 +194,6 @@ export async function validateSession(
 
   // Check expiration
   if (session.expiresAt.getTime() < Date.now()) {
-    // Delete expired session
     await prisma.session.delete({ where: { id: session.id } }).catch(() => {});
     return null;
   }
@@ -174,4 +232,3 @@ export async function revokeAllUserSessions(userId: string): Promise<void> {
     where: { userId },
   });
 }
-

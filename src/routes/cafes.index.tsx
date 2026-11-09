@@ -71,28 +71,7 @@ function CafesPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground" dir="rtl">
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-5 pt-6">
-        <Link to="/" className="flex items-center gap-3" dir="ltr">
-          <Aperture className="h-9 w-9 text-primary" strokeWidth={1.5} />
-          <span className="font-latin text-2xl font-semibold">CaféLens</span>
-        </Link>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setIsFavoritesOpen(true)}
-            className="glass flex items-center gap-1.5 rounded-full px-4 py-2 text-xs text-muted-foreground hover:text-foreground transition"
-          >
-            <Bookmark className="h-3.5 w-3.5 text-primary" /> المفضلة والخطط
-          </button>
-          <button
-            onClick={() => setIsCompareOpen(true)}
-            className="glass flex items-center gap-1.5 rounded-full px-4 py-2 text-xs text-muted-foreground hover:text-foreground transition"
-          >
-            <GitCompareArrows className="h-3.5 w-3.5 text-primary" /> المقارنة ({getCompareList().length})
-          </button>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-6xl px-5 pb-20 pt-10">
+      <main className="mx-auto max-w-6xl px-5 pb-20 pt-8 sm:pt-10">
         <h1 className="font-display text-4xl font-bold md:text-5xl">
           كل <span className="text-gold">الكافيهات</span>
         </h1>
@@ -238,20 +217,6 @@ function CafesPage() {
           </div>
         )}
       </main>
-
-      {/* Comparison Modal */}
-      <CafeComparisonModal
-        isOpen={isCompareOpen}
-        onClose={() => setIsCompareOpen(false)}
-        allCafes={data}
-      />
-
-      {/* Favorites Drawer */}
-      <FavoritesDrawer
-        isOpen={isFavoritesOpen}
-        onClose={() => setIsFavoritesOpen(false)}
-        allCafes={data}
-      />
     </div>
   );
 }

@@ -44,17 +44,67 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
+/**
+ * Attaches Enterprise Defense-in-Depth Security Headers to HTTP responses.
+ */
+function applySecurityHeaders(headers: Headers): Headers {
+  const secureHeaders = new Headers(headers);
+  secureHeaders.set("X-Content-Type-Options", "nosniff");
+  secureHeaders.set("X-Frame-Options", "SAMEORIGIN");
+  secureHeaders.set("X-XSS-Protection", "1; mode=block");
+  secureHeaders.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  secureHeaders.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(self)");
+  secureHeaders.set(
+    "Content-Security-Policy",
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' blob: https: wss:; frame-ancestors 'self';"
+  );
+  return secureHeaders;
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      // 1. CSRF Origin Verification on state-changing requests
+      if (["POST", "PUT", "DELETE", "PATCH"].includes(request.method)) {
+        const origin = request.headers.get("origin");
+        const host = request.headers.get("host");
+        if (origin && host) {
+          try {
+            const originHost = new URL(origin).host;
+            // Allow exact host match, localhost in dev, or official vercel domain
+            if (originHost !== host && !originHost.endsWith(".vercel.app") && !originHost.includes("localhost")) {
+              return new Response(JSON.stringify({ error: "CSRF: Cross-origin request rejected" }), {
+                status: 403,
+                headers: { "content-type": "application/json" },
+              });
+            }
+          } catch {
+            return new Response(JSON.stringify({ error: "Invalid Origin header" }), {
+              status: 400,
+              headers: { "content-type": "application/json" },
+            });
+          }
+        }
+      }
+
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      const normalized = await normalizeCatastrophicSsrResponse(response);
+
+      // 2. Attach hardened security headers
+      const secureHeaders = applySecurityHeaders(normalized.headers);
+
+      return new Response(normalized.body, {
+        status: normalized.status,
+        statusText: normalized.statusText,
+        headers: secureHeaders,
+      });
     } catch (error) {
       console.error(error);
+      const errorHeaders = applySecurityHeaders(new Headers({ "content-type": "text/html; charset=utf-8" }));
       return new Response(renderErrorPage(), {
         status: 500,
-        headers: { "content-type": "text/html; charset=utf-8" },
+        headers: errorHeaders,
       });
     }
   },
