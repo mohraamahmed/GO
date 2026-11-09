@@ -17,10 +17,8 @@ import {
   isFavorite, toggleFavorite, isInCompareList, toggleCompareCafe,
   saveOutingPlan, getCompareList
 } from "@/lib/user-storage";
-import { CafeComparisonModal } from "@/components/CafeComparisonModal";
-import { FavoritesDrawer } from "@/components/FavoritesDrawer";
-import { SubscriptionModal } from "@/components/SubscriptionModal";
 import { getCurrentUserFn } from "@/lib/api-auth.functions";
+import { useGlobalUI } from "@/context/GlobalUIContext";
 import { Button } from "@/components/ui/button";
 import { Crown, Lock } from "lucide-react";
 import { SmartImage, ThumbImage } from "@/components/SmartImage";
@@ -104,13 +102,11 @@ function CafePage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [compareSuccess, setCompareSuccess] = useState<string | null>(null);
   const [copiedAddress, setCopiedAddress] = useState(false);
+  const { openSubscription } = useGlobalUI();
 
-  // Storage / Modals
+  // Storage
   const [isFav, setIsFav] = useState(false);
   const [inCompare, setInCompare] = useState(false);
-  const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
-  const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
-  const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
 
   const { data: authData } = useQuery({
     queryKey: ["current-user"],
@@ -125,6 +121,14 @@ function CafePage() {
       setIsFav(isFavorite(c.id));
       setInCompare(isInCompareList(c.id));
     }
+    const onStorage = () => {
+      if (c?.id) {
+        setIsFav(isFavorite(c.id));
+        setInCompare(isInCompareList(c.id));
+      }
+    };
+    window.addEventListener("cafelens_storage_update", onStorage);
+    return () => window.removeEventListener("cafelens_storage_update", onStorage);
   }, [c?.id]);
 
   if (!c) return null;
@@ -274,18 +278,30 @@ function CafePage() {
         <div className="absolute top-1/3 left-1/4 w-[500px] h-[500px] bg-amber-600/5 rounded-full blur-[160px]" />
       </div>
 
-      {/* BREADCRUMB / BACK LINK */}
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-4 pb-1">
+      {/* BREADCRUMBS & NAVIGATION */}
+      <nav aria-label="مسار التنقل" className="mx-auto max-w-7xl px-4 sm:px-6 pt-4 pb-1 flex items-center justify-between flex-wrap gap-2 text-xs">
+        <ol className="flex items-center gap-1.5 text-muted-foreground">
+          <li>
+            <Link to="/" className="hover:text-primary transition">الرئيسية</Link>
+          </li>
+          <li aria-hidden="true" className="text-border">/</li>
+          <li>
+            <Link to="/cafes" className="hover:text-primary transition">دليل الكافيهات</Link>
+          </li>
+          <li aria-hidden="true" className="text-border">/</li>
+          <li className="font-bold text-foreground truncate max-w-[160px] sm:max-w-xs" aria-current="page">
+            {c.name}
+          </li>
+        </ol>
+
         <Link
           to="/cafes"
-          className="group inline-flex items-center gap-2 text-xs sm:text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          className="group inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
         >
-          <div className="grid h-8 w-8 place-items-center rounded-xl bg-card border border-border/60 group-hover:border-primary/50 group-hover:bg-primary/10 transition shadow-sm">
-            <ArrowRight className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
-          </div>
-          <span>العودة إلى دليل الكافيهات</span>
+          <span>العودة للدليل</span>
+          <ArrowRight className="h-3.5 w-3.5 group-hover:-translate-x-0.5 transition-transform" />
         </Link>
-      </div>
+      </nav>
 
       <main className="mx-auto max-w-7xl px-4 sm:px-6 pb-32 pt-6">
 
@@ -316,9 +332,8 @@ function CafePage() {
                     <button
                       key={p.url}
                       onClick={() => setActivePhotoIdx(idx)}
-                      className={`relative h-10 w-12 rounded-lg overflow-hidden border-2 transition shrink-0 ${
-                        activePhotoIdx === idx ? "border-primary scale-105 shadow-md" : "border-transparent opacity-60 hover:opacity-100"
-                      }`}
+                      className={`relative h-10 w-12 rounded-lg overflow-hidden border-2 transition shrink-0 ${activePhotoIdx === idx ? "border-primary scale-105 shadow-md" : "border-transparent opacity-60 hover:opacity-100"
+                        }`}
                     >
                       <ThumbImage src={p.url} alt="" className="h-full w-full object-cover" />
                     </button>
@@ -392,11 +407,10 @@ function CafePage() {
             <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={handleToggleFav}
-                className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold border transition shadow-sm ${
-                  isFav
+                className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold border transition shadow-sm ${isFav
                     ? "bg-rose-500/15 border-rose-500/40 text-rose-400 hover:bg-rose-500/25"
                     : "border-border/60 bg-secondary/50 text-muted-foreground hover:text-rose-400 hover:border-rose-500/30"
-                }`}
+                  }`}
               >
                 <Heart className={`h-4 w-4 ${isFav ? "fill-rose-500 text-rose-500" : ""}`} />
                 <span>{isFav ? "في المفضلة" : "أضف للمفضلة"}</span>
@@ -404,11 +418,10 @@ function CafePage() {
 
               <button
                 onClick={handleToggleCompare}
-                className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold border transition shadow-sm ${
-                  inCompare
+                className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold border transition shadow-sm ${inCompare
                     ? "bg-primary/20 border-primary/40 text-primary"
                     : "border-border/60 bg-secondary/50 text-muted-foreground hover:text-primary hover:border-primary/40"
-                }`}
+                  }`}
               >
                 <GitCompareArrows className="h-4 w-4" />
                 <span>{inCompare ? "في المقارنة" : "قارن مع كافيهات أخرى"}</span>
@@ -455,11 +468,11 @@ function CafePage() {
         )}
 
         {/* SERVICES / FACILITIES HIGHLIGHTS */}
-        {c.services.length > 0 && (
-          <section className="mt-8">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
-              <Sparkles className="h-3.5 w-3.5 text-primary" /> المرافق والخدمات المتوفرة
-            </h2>
+        <section className="mt-8">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+            <Sparkles className="h-3.5 w-3.5 text-primary" /> المرافق والخدمات المتوفرة
+          </h2>
+          {c.services.length > 0 ? (
             <div className="flex flex-wrap gap-2.5">
               {c.services.map((s) => {
                 const IconComponent = SERVICE_ICONS[s.toLowerCase()] || Check;
@@ -474,8 +487,12 @@ function CafePage() {
                 );
               })}
             </div>
-          </section>
-        )}
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              المرافق التفصيلية لهذا الفرع قيد التوثيق والتحديث المستمر.
+            </p>
+          )}
+        </section>
 
         {/* MENU & INTERACTIVE OUTING BILL SECTION */}
         <section className="mt-12">
@@ -530,7 +547,7 @@ function CafePage() {
               </div>
               <div className="pt-2">
                 <Button
-                  onClick={() => setIsSubscriptionModalOpen(true)}
+                  onClick={openSubscription}
                   className="bg-gold text-primary-foreground font-bold px-8 py-5 text-sm rounded-full shadow-glow"
                 >
                   اشترك الآن (100 ج.م/شهر أو 1000 ج.م/سنة)
@@ -539,251 +556,248 @@ function CafePage() {
             </div>
           ) : (
             <div className="grid gap-8 lg:grid-cols-12 items-start">
-            {/* MENU ITEMS (Right side in RTL) */}
-            <div className="space-y-5 lg:col-span-7">
-              {/* Category Pills & Search */}
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap gap-2">
-                  {categories.map((cat) => (
-                    <button
-                      key={cat}
-                      onClick={() => setSelectedCategory(cat)}
-                      className={`rounded-2xl px-4 py-2 text-xs font-bold transition-all shadow-sm ${
-                        selectedCategory === cat
-                          ? "bg-primary text-primary-foreground shadow-glow"
-                          : "border border-border/50 bg-secondary/50 text-muted-foreground hover:text-foreground hover:border-primary/40"
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
+              {/* MENU ITEMS (Right side in RTL) */}
+              <div className="space-y-5 lg:col-span-7">
+                {/* Category Pills & Search */}
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap gap-2">
+                    {categories.map((cat) => (
+                      <button
+                        key={cat}
+                        onClick={() => setSelectedCategory(cat)}
+                        className={`rounded-2xl px-4 py-2 text-xs font-bold transition-all shadow-sm ${selectedCategory === cat
+                            ? "bg-primary text-primary-foreground shadow-glow"
+                            : "border border-border/50 bg-secondary/50 text-muted-foreground hover:text-foreground hover:border-primary/40"
+                          }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="ابحث في المنيو..."
+                      value={menuSearch}
+                      onChange={(e) => setMenuSearch(e.target.value)}
+                      className="w-44 sm:w-56 rounded-2xl border border-border/50 bg-card/60 px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/70 transition backdrop-blur-md shadow-sm"
+                    />
+                    {menuSearch && (
+                      <button
+                        onClick={() => setMenuSearch("")}
+                        className="absolute left-3 top-2.5 text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="ابحث في المنيو..."
-                    value={menuSearch}
-                    onChange={(e) => setMenuSearch(e.target.value)}
-                    className="w-44 sm:w-56 rounded-2xl border border-border/50 bg-card/60 px-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/70 transition backdrop-blur-md shadow-sm"
-                  />
-                  {menuSearch && (
-                    <button
-                      onClick={() => setMenuSearch("")}
-                      className="absolute left-3 top-2.5 text-xs text-muted-foreground hover:text-foreground"
-                    >
-                      ✕
-                    </button>
+                {/* Menu Cards */}
+                <div className="space-y-3">
+                  {filteredMenuItems.length === 0 ? (
+                    <div className="py-16 text-center rounded-3xl border border-border/40 bg-card/30 p-8 space-y-3">
+                      <Coffee className="h-8 w-8 text-muted-foreground/30 mx-auto" />
+                      <p className="text-sm font-semibold text-muted-foreground">لا توجد أصناف مطابقة للبحث في هذا القسم</p>
+                    </div>
+                  ) : (
+                    filteredMenuItems.map((item) => {
+                      const qty = pickedItems[item.id] ?? 0;
+                      return (
+                        <div
+                          key={item.id}
+                          className={`group rounded-2xl border p-4 transition-all flex items-center justify-between gap-4 backdrop-blur-md ${qty > 0
+                              ? "border-primary/50 bg-primary/8 shadow-md"
+                              : "border-border/40 bg-card/50 hover:bg-card/80 hover:border-border"
+                            }`}
+                        >
+                          <div className="space-y-1 min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h4 className="font-semibold text-sm sm:text-base text-foreground group-hover:text-primary transition-colors">
+                                {item.name}
+                              </h4>
+                              {item.categoryLabel && (
+                                <span className="text-[10px] text-muted-foreground bg-secondary/50 px-2 py-0.5 rounded-full border border-border/30">
+                                  {item.categoryLabel}
+                                </span>
+                              )}
+                            </div>
+                            {item.description && (
+                              <p className="text-xs text-muted-foreground line-clamp-1">{item.description}</p>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-4 shrink-0">
+                            <span className="font-display font-bold text-base sm:text-lg text-foreground">
+                              {item.price} <span className="text-xs font-normal text-muted-foreground">ج.م</span>
+                            </span>
+
+                            <div className="flex items-center gap-1.5">
+                              {qty > 0 && (
+                                <>
+                                  <button
+                                    onClick={() => updateQty(item.id, -1)}
+                                    className="grid h-8 w-8 place-items-center rounded-xl bg-secondary/60 hover:bg-rose-500/20 hover:text-rose-400 text-foreground transition"
+                                  >
+                                    <Minus className="h-3.5 w-3.5" />
+                                  </button>
+                                  <span className="w-6 text-center text-xs font-bold text-primary">{qty}</span>
+                                </>
+                              )}
+                              <button
+                                onClick={() => updateQty(item.id, 1)}
+                                className={`grid h-8 w-8 place-items-center rounded-xl transition ${qty > 0
+                                    ? "bg-primary text-primary-foreground shadow-sm"
+                                    : "border border-primary/40 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground"
+                                  }`}
+                                title="إضافة"
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
                   )}
                 </div>
               </div>
 
-              {/* Menu Cards */}
-              <div className="space-y-3">
-                {filteredMenuItems.length === 0 ? (
-                  <div className="py-16 text-center rounded-3xl border border-border/40 bg-card/30 p-8 space-y-3">
-                    <Coffee className="h-8 w-8 text-muted-foreground/30 mx-auto" />
-                    <p className="text-sm font-semibold text-muted-foreground">لا توجد أصناف مطابقة للبحث في هذا القسم</p>
+              {/* BILL RECEIPT PANEL (Left side in RTL) */}
+              <div className="lg:col-span-5">
+                <div className="rounded-3xl border border-border/60 bg-card/70 backdrop-blur-xl p-6 space-y-5 lg:sticky lg:top-24 shadow-xl">
+                  <div className="flex items-center justify-between pb-3 border-b border-border/40">
+                    <div className="flex items-center gap-2.5">
+                      <div className="grid h-8 w-8 place-items-center rounded-xl bg-primary/15 border border-primary/30">
+                        <Calculator className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-display font-bold text-base text-foreground">فاتورة الخروجة المقدرة</h3>
+                        <p className="text-[11px] text-muted-foreground">{peopleCount} {peopleCount === 1 ? "فرد" : "أفراد"}</p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-bold text-primary bg-primary/10 border border-primary/20 px-3 py-1 rounded-full">
+                      {billItems.length} {billItems.length === 1 ? "صنف" : "أصناف"}
+                    </span>
                   </div>
-                ) : (
-                  filteredMenuItems.map((item) => {
-                    const qty = pickedItems[item.id] ?? 0;
-                    return (
-                      <div
-                        key={item.id}
-                        className={`group rounded-2xl border p-4 transition-all flex items-center justify-between gap-4 backdrop-blur-md ${
-                          qty > 0
-                            ? "border-primary/50 bg-primary/8 shadow-md"
-                            : "border-border/40 bg-card/50 hover:bg-card/80 hover:border-border"
-                        }`}
-                      >
-                        <div className="space-y-1 min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className="font-semibold text-sm sm:text-base text-foreground group-hover:text-primary transition-colors">
-                              {item.name}
-                            </h4>
-                            {item.categoryLabel && (
-                              <span className="text-[10px] text-muted-foreground bg-secondary/50 px-2 py-0.5 rounded-full border border-border/30">
-                                {item.categoryLabel}
-                              </span>
-                            )}
+
+                  {/* Items in receipt */}
+                  {billItems.length === 0 ? (
+                    <div className="py-10 text-center space-y-3 rounded-2xl border border-dashed border-border/60 bg-secondary/20">
+                      <Coffee className="h-8 w-8 text-muted-foreground/30 mx-auto" />
+                      <p className="text-xs font-medium text-muted-foreground">اضغط (+) بجانب أي صنف في القائمة لإضافته للفاتورة</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                      {billItems.map((item) => (
+                        <div key={item.id} className="flex items-center justify-between gap-3 text-xs p-2.5 rounded-xl bg-secondary/30 border border-border/30">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-foreground truncate">{item.name}</p>
+                            <p className="text-[11px] text-muted-foreground">{item.price} ج.م × {item.qty}</p>
                           </div>
-                          {item.description && (
-                            <p className="text-xs text-muted-foreground line-clamp-1">{item.description}</p>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-4 shrink-0">
-                          <span className="font-display font-bold text-base sm:text-lg text-foreground">
-                            {item.price} <span className="text-xs font-normal text-muted-foreground">ج.م</span>
-                          </span>
-
-                          <div className="flex items-center gap-1.5">
-                            {qty > 0 && (
-                              <>
-                                <button
-                                  onClick={() => updateQty(item.id, -1)}
-                                  className="grid h-8 w-8 place-items-center rounded-xl bg-secondary/60 hover:bg-rose-500/20 hover:text-rose-400 text-foreground transition"
-                                >
-                                  <Minus className="h-3.5 w-3.5" />
-                                </button>
-                                <span className="w-6 text-center text-xs font-bold text-primary">{qty}</span>
-                              </>
-                            )}
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-foreground text-sm">{item.price * item.qty} ج.م</span>
                             <button
-                              onClick={() => updateQty(item.id, 1)}
-                              className={`grid h-8 w-8 place-items-center rounded-xl transition ${
-                                qty > 0
-                                  ? "bg-primary text-primary-foreground shadow-sm"
-                                  : "border border-primary/40 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground"
-                              }`}
-                              title="إضافة"
+                              onClick={() => updateQty(item.id, -item.qty)}
+                              className="text-muted-foreground hover:text-rose-400 p-1 transition"
+                              title="حذف"
                             >
-                              <Plus className="h-3.5 w-3.5" />
+                              ✕
                             </button>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-
-            {/* BILL RECEIPT PANEL (Left side in RTL) */}
-            <div className="lg:col-span-5">
-              <div className="rounded-3xl border border-border/60 bg-card/70 backdrop-blur-xl p-6 space-y-5 lg:sticky lg:top-24 shadow-xl">
-                <div className="flex items-center justify-between pb-3 border-b border-border/40">
-                  <div className="flex items-center gap-2.5">
-                    <div className="grid h-8 w-8 place-items-center rounded-xl bg-primary/15 border border-primary/30">
-                      <Calculator className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-display font-bold text-base text-foreground">فاتورة الخروجة المقدرة</h3>
-                      <p className="text-[11px] text-muted-foreground">{peopleCount} {peopleCount === 1 ? "فرد" : "أفراد"}</p>
-                    </div>
-                  </div>
-                  <span className="text-xs font-bold text-primary bg-primary/10 border border-primary/20 px-3 py-1 rounded-full">
-                    {billItems.length} {billItems.length === 1 ? "صنف" : "أصناف"}
-                  </span>
-                </div>
-
-                {/* Items in receipt */}
-                {billItems.length === 0 ? (
-                  <div className="py-10 text-center space-y-3 rounded-2xl border border-dashed border-border/60 bg-secondary/20">
-                    <Coffee className="h-8 w-8 text-muted-foreground/30 mx-auto" />
-                    <p className="text-xs font-medium text-muted-foreground">اضغط (+) بجانب أي صنف في القائمة لإضافته للفاتورة</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
-                    {billItems.map((item) => (
-                      <div key={item.id} className="flex items-center justify-between gap-3 text-xs p-2.5 rounded-xl bg-secondary/30 border border-border/30">
-                        <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-foreground truncate">{item.name}</p>
-                          <p className="text-[11px] text-muted-foreground">{item.price} ج.م × {item.qty}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-foreground text-sm">{item.price * item.qty} ج.م</span>
-                          <button
-                            onClick={() => updateQty(item.id, -item.qty)}
-                            className="text-muted-foreground hover:text-rose-400 p-1 transition"
-                            title="حذف"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Service and VAT Toggles */}
-                <div className="rounded-2xl bg-secondary/30 border border-border/40 p-3.5 space-y-3">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground font-medium">رسوم الخدمة المقررة (12%)</span>
-                    <button
-                      onClick={() => setHasServiceCharge(!hasServiceCharge)}
-                      className={`relative h-6 w-11 rounded-full transition-colors ${hasServiceCharge ? "bg-primary" : "bg-muted"}`}
-                    >
-                      <span className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-all shadow-sm ${hasServiceCharge ? "right-1" : "left-1"}`} />
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground font-medium">ضريبة القيمة المضافة (14%)</span>
-                    <button
-                      onClick={() => setHasVat(!hasVat)}
-                      className={`relative h-6 w-11 rounded-full transition-colors ${hasVat ? "bg-primary" : "bg-muted"}`}
-                    >
-                      <span className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-all shadow-sm ${hasVat ? "right-1" : "left-1"}`} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Financial Summary Breakdown */}
-                <div className="border-t border-border/40 pt-4 space-y-2 text-xs">
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>الحساب الأساسي للطلبات</span>
-                    <span className="font-medium text-foreground">{billFees.subtotal} ج.م</span>
-                  </div>
-                  {hasServiceCharge && billFees.serviceAmount > 0 && (
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>رسوم الخدمة (12%)</span>
-                      <span className="text-amber-400 font-medium">+{billFees.serviceAmount} ج.م</span>
-                    </div>
-                  )}
-                  {hasVat && billFees.vatAmount > 0 && (
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>ضريبة القيمة المضافة (14%)</span>
-                      <span className="text-amber-400 font-medium">+{billFees.vatAmount} ج.م</span>
+                      ))}
                     </div>
                   )}
 
-                  <div className="flex justify-between items-baseline pt-3 border-t border-border/50">
-                    <div>
-                      <span className="text-sm font-bold text-foreground">الإجمالي النهائي</span>
-                      {peopleCount > 1 && (
-                        <p className="text-[11px] text-primary mt-0.5">({billFees.grandTotal} ج.م / للفرد)</p>
-                      )}
+                  {/* Service and VAT Toggles */}
+                  <div className="rounded-2xl bg-secondary/30 border border-border/40 p-3.5 space-y-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground font-medium">رسوم الخدمة المقررة (12%)</span>
+                      <button
+                        onClick={() => setHasServiceCharge(!hasServiceCharge)}
+                        className={`relative h-6 w-11 rounded-full transition-colors ${hasServiceCharge ? "bg-primary" : "bg-muted"}`}
+                      >
+                        <span className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-all shadow-sm ${hasServiceCharge ? "right-1" : "left-1"}`} />
+                      </button>
                     </div>
-                    <span className="text-2xl font-black text-primary font-display">
-                      {billFees.grandTotal * peopleCount} ج.م
-                    </span>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground font-medium">ضريبة القيمة المضافة (14%)</span>
+                      <button
+                        onClick={() => setHasVat(!hasVat)}
+                        className={`relative h-6 w-11 rounded-full transition-colors ${hasVat ? "bg-primary" : "bg-muted"}`}
+                      >
+                        <span className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-all shadow-sm ${hasVat ? "right-1" : "left-1"}`} />
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                {/* Action CTA Buttons */}
-                <div className="space-y-2.5 pt-2">
-                  <button
-                    onClick={shareOutingOnWhatsApp}
-                    className="w-full flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white py-3 text-xs font-bold transition shadow-md shadow-emerald-950/20"
-                  >
-                    <Share2 className="h-4 w-4" />
-                    <span>مشاركة الفاتورة مع الأصدقاء (WhatsApp)</span>
-                  </button>
-
-                  <button
-                    onClick={handleSaveOuting}
-                    disabled={billItems.length === 0}
-                    className="w-full flex items-center justify-center gap-2 rounded-2xl border border-primary/40 bg-primary/10 hover:bg-primary/20 text-primary py-3 text-xs font-bold transition disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    {saveSuccess ? (
-                      <>
-                        <Check className="h-4 w-4 text-emerald-400" />
-                        <span className="text-emerald-400">تم حفظ الخطة بنجاح!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Bookmark className="h-4 w-4" />
-                        <span>حفظ هذه الخطة في المفضلة</span>
-                      </>
+                  {/* Financial Summary Breakdown */}
+                  <div className="border-t border-border/40 pt-4 space-y-2 text-xs">
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>الحساب الأساسي للطلبات</span>
+                      <span className="font-medium text-foreground">{billFees.subtotal} ج.م</span>
+                    </div>
+                    {hasServiceCharge && billFees.serviceAmount > 0 && (
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>رسوم الخدمة (12%)</span>
+                        <span className="text-amber-400 font-medium">+{billFees.serviceAmount} ج.م</span>
+                      </div>
                     )}
-                  </button>
+                    {hasVat && billFees.vatAmount > 0 && (
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>ضريبة القيمة المضافة (14%)</span>
+                        <span className="text-amber-400 font-medium">+{billFees.vatAmount} ج.م</span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between items-baseline pt-3 border-t border-border/50">
+                      <div>
+                        <span className="text-sm font-bold text-foreground">الإجمالي النهائي</span>
+                        {peopleCount > 1 && (
+                          <p className="text-[11px] text-primary mt-0.5">({billFees.grandTotal} ج.م / للفرد)</p>
+                        )}
+                      </div>
+                      <span className="text-2xl font-black text-primary font-display">
+                        {billFees.grandTotal * peopleCount} ج.م
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Action CTA Buttons */}
+                  <div className="space-y-2.5 pt-2">
+                    <button
+                      onClick={shareOutingOnWhatsApp}
+                      className="w-full flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white py-3 text-xs font-bold transition shadow-md shadow-emerald-950/20"
+                    >
+                      <Share2 className="h-4 w-4" />
+                      <span>مشاركة الفاتورة مع الأصدقاء (WhatsApp)</span>
+                    </button>
+
+                    <button
+                      onClick={handleSaveOuting}
+                      disabled={billItems.length === 0}
+                      className="w-full flex items-center justify-center gap-2 rounded-2xl border border-primary/40 bg-primary/10 hover:bg-primary/20 text-primary py-3 text-xs font-bold transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {saveSuccess ? (
+                        <>
+                          <Check className="h-4 w-4 text-emerald-400" />
+                          <span className="text-emerald-400">تم حفظ الخطة بنجاح!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Bookmark className="h-4 w-4" />
+                          <span>حفظ هذه الخطة في المفضلة</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
-      </section>
+          )}
+        </section>
 
         {/* WORKING HOURS & CONTACT INFO ROW */}
         <section className="mt-14 grid gap-6 md:grid-cols-2">

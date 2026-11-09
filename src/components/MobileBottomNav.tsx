@@ -28,6 +28,7 @@ export function MobileBottomNav() {
 
   return (
     <nav
+      aria-label="شريط التنقل السريع للهواتف"
       className="fixed bottom-0 inset-x-0 z-40 md:hidden bg-card/95 backdrop-blur-xl border-t border-border/60 pb-safe transition-all shadow-[0_-4px_20px_rgba(0,0,0,0.4)]"
       dir="rtl"
     >

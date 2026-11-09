@@ -1,37 +1,32 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
-import { getCurrentUserFn, logoutUserFn } from "@/lib/api-auth.functions";
+import { getCurrentUserFn } from "@/lib/api-auth.functions";
 import { useGlobalUI } from "@/context/GlobalUIContext";
-import { SubscriptionModal } from "@/components/SubscriptionModal";
 import { toast } from "sonner";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import {
-  Menu, MapPin, ChevronDown, Sparkles, Laptop, UsersRound, Heart, BriefcaseBusiness,
-  Calculator, ChevronLeft, TreePine, Star, Aperture, Clock, ShieldCheck,
-  Minus, Plus, Shuffle, X, BarChart3, GitCompareArrows, Map as MapIcon, Bookmark, User, Compass,
-  Search, Phone, Globe, ExternalLink, Share2, Coffee, Utensils, Check, MessageCircle,
-  Wifi, Zap, Car, Wind, VolumeX, BadgeCheck, CheckCircle2, Crown, LogIn, LogOut,
+  MapPin, Sparkles, Laptop, UsersRound, Heart, BriefcaseBusiness,
+  Calculator, ChevronLeft, TreePine, Star, ShieldCheck,
+  Minus, Plus, Shuffle, X, GitCompareArrows,
+  Search, Crown, Bookmark, Coffee, Utensils, Check, Car, Phone, ExternalLink, MessageCircle,
 } from "lucide-react";
 import { HeroVideoBackground } from "@/components/HeroVideoBackground";
 import { Button } from "@/components/ui/button";
 import { cafesQuery, moodQuery, menuQuery } from "@/lib/queries";
 import { AREA_CLASS_LABELS, type CafeListItem, type CafePhoto, type MoodResult } from "@/lib/cafes.functions";
-import { MOODS, type MoodKey } from "@/lib/mood";
+import { MOODS } from "@/lib/mood";
 import {
   getCafeMenuData, calculateCafeScoreWithFacilities, getCafeVerification,
-  findSmartAlternatives, calculateBillWithFees, FACILITIES_LIST,
-  type FacilityKey, type MenuItem, type CafeScoringResult
+  calculateBillWithFees, calculateBayesianRating, findSmartAlternatives, FACILITIES_LIST,
+  type FacilityKey, type MenuItem,
 } from "@/lib/ranking-and-budget";
 import {
   isFavorite, toggleFavorite, isInCompareList, toggleCompareCafe,
-  saveOutingPlan, getCompareList
+  saveOutingPlan, getCompareList,
 } from "@/lib/user-storage";
-import { CafeComparisonModal } from "@/components/CafeComparisonModal";
-import { FavoritesDrawer } from "@/components/FavoritesDrawer";
 import { SmartImage, ThumbImage } from "@/components/SmartImage";
-import heroImg from "@/assets/hero-cafe.webp";
 import coffee from "@/assets/coffee.webp";
 import outdoor from "@/assets/outdoor.webp";
 import work from "@/assets/work.webp";
@@ -78,8 +73,6 @@ const AREA_OPTIONS: { value: AreaFilter; label: string }[] = [
   { value: "new_cairo", label: "القاهرة الجديدة" },
   { value: "sheikh_zayed", label: "الشيخ زايد" },
 ];
-const matchesArea = (c: CafeListItem, a: AreaFilter) =>
-  a === "الكل" || (a === "new_cairo" ? c.area_class.startsWith("new_cairo") : c.area_class === a);
 
 const cats = [
   { img: coffee, icon: Star, label: "قهوة مختصة", key: "specialty", note: "محامص ومشروبات مقطّرة" },
@@ -88,145 +81,59 @@ const cats = [
 ] as const;
 type CatKey = (typeof cats)[number]["key"];
 
-function NavMenu({
-  onOpenCompare,
-  onOpenFavorites,
-}: {
-  onOpenCompare?: () => void;
-  onOpenFavorites?: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [isSubscriptionOpen, setIsSubscriptionOpen] = useState(false);
-  const queryClient = useQueryClient();
+const QUICK_SEARCH_SUGGESTIONS = [
+  { label: "قهوة مختصة", query: "قهوة مختصة" },
+  { label: "مناسب للعمل والمذاكرة", query: "عمل" },
+  { label: "جلسات خارجية", query: "جلسات خارجية" },
+  { label: "التجمع الخامس", query: "التجمع" },
+  { label: "الشيخ زايد", query: "زايد" },
+  { label: "Waterway", query: "Waterway" },
+  { label: "Arkan Plaza", query: "Arkan" },
+];
 
-  const { data: authData } = useQuery({
-    queryKey: ["current-user"],
-    queryFn: () => getCurrentUserFn(),
-    staleTime: 60_000,
-  });
+const COVERAGE_AREAS = [
+  {
+    key: "fifth_settlement",
+    title: "التجمع الخامس",
+    desc: "شارع التسعين، واتر واي، ميديكال بارك، وأرقى كافيهات القاهرة الجديدة",
+    badge: "الأكثر طلباً",
+  },
+  {
+    key: "new_cairo",
+    title: "القاهرة الجديدة",
+    desc: "كايرو فيستفال سيتي، الرحاب، التجمع الأول، والتوسعات الشرقية",
+    badge: "تغطية شاملة",
+  },
+  {
+    key: "sheikh_zayed",
+    title: "الشيخ زايد",
+    desc: "أركان بلازا، كابيتال بيزنس بارك، ممشى زايد، ووصلة دهشور",
+    badge: "وجهات فاخرة",
+  },
+];
 
-  const user = authData?.user;
-  const subscription = authData?.subscription;
-
-  const scroll = (id: string) => {
-    setOpen(false);
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
-  const items: { icon: typeof Compass; label: string; action?: (() => void) | undefined; soon?: boolean }[] = [
-    { icon: Compass, label: "الرئيسية", action: () => { setOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); } },
-    { icon: Menu, label: "كل الكافيهات", action: undefined },
-    { icon: MapPin, label: "المناطق", action: () => scroll("areas") },
-    { icon: Calculator, label: "حاسبة الميزانية", action: () => scroll("calculator") },
-    { icon: Shuffle, label: "اختر لي خروجة", action: () => scroll("tonight") },
-    { icon: BarChart3, label: "تقرير جودة البيانات", action: undefined },
-    { icon: GitCompareArrows, label: "المقارنة", action: () => { setOpen(false); onOpenCompare?.(); } },
-    { icon: Bookmark, label: "المفضلة والخطط", action: () => { setOpen(false); onOpenFavorites?.(); } },
-    { icon: MapIcon, label: "الخريطة", soon: true },
-  ];
-
-  return (
-    <div className="relative">
-      <button onClick={() => setOpen(!open)} className="nav-item glass grid h-10 w-10 sm:h-12 sm:w-12 place-items-center rounded-full transition hover:shadow-glow" aria-label="القائمة" aria-expanded={open}>
-        {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-      </button>
-      {open && (
-        <>
-          <button aria-hidden className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm cursor-default" onClick={() => setOpen(false)} />
-          <nav className="absolute right-0 top-12 sm:top-14 z-50 w-72 max-w-[calc(100vw-2rem)] rounded-2xl p-2 bg-[#1a120c] border border-border/80 shadow-2xl" aria-label="التنقل الرئيسي" dir="rtl">
-            {/* USER PROFILE / AUTH SECTION */}
-            {user ? (
-              <div className="border-b border-border/50 p-3 mb-1.5 bg-card/40 rounded-xl">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-sm text-foreground">{user.fullName}</span>
-                  <span className="text-[10px] rounded px-1.5 py-0.5 bg-primary/10 text-primary font-mono">{user.role}</span>
-                </div>
-                <div className="mt-1 flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground font-mono" dir="ltr">{user.phoneNumber}</span>
-                  {subscription?.hasActiveSubscription ? (
-                    <span className="text-[10px] text-emerald-500 font-medium">مشترك ({subscription.daysRemaining} يوم)</span>
-                  ) : (
-                    <button
-                      onClick={() => { setOpen(false); setIsSubscriptionOpen(true); }}
-                      className="text-[11px] text-primary hover:underline flex items-center gap-1 font-semibold"
-                    >
-                      <Crown className="h-3 w-3" /> اشترك الآن
-                    </button>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="border-b border-border/50 p-2 mb-1.5">
-                <Link
-                  to="/auth"
-                  onClick={() => setOpen(false)}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90"
-                >
-                  <LogIn className="h-3.5 w-3.5" /> تسجيل الدخول / حساب جديد
-                </Link>
-              </div>
-            )}
-
-            {user?.role === "ADMIN" && (
-              <Link
-                to="/admin"
-                onClick={() => setOpen(false)}
-                className="flex w-full items-center gap-3 rounded-xl px-4 py-2 text-sm font-medium text-amber-500 hover:bg-amber-500/10 mb-1"
-              >
-                <ShieldCheck className="h-4 w-4" /> لوحة الإدارة (Admin)
-              </Link>
-            )}
-
-            {user && (
-              <button
-                onClick={() => { setOpen(false); setIsSubscriptionOpen(true); }}
-                className="flex w-full items-center gap-3 rounded-xl px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10 mb-1"
-              >
-                <Crown className="h-4 w-4" /> باقة الاشتراك (100 ج.م)
-              </button>
-            )}
-
-            {items.map((it) =>
-              it.soon ? (
-                <span key={it.label} className="flex w-full items-center justify-between rounded-xl px-4 py-2 text-sm text-muted-foreground/60">
-                  <span className="flex items-center gap-3"><it.icon className="h-4 w-4" />{it.label}</span>
-                  <span className="text-[10px]">قريبًا</span>
-                </span>
-              ) : it.label === "كل الكافيهات" ? (
-                <Link key={it.label} to="/cafes" onClick={() => setOpen(false)} className="flex w-full items-center gap-3 rounded-xl px-4 py-2 text-sm transition hover:bg-primary/10">
-                  <it.icon className="h-4 w-4 text-primary" />{it.label}
-                </Link>
-              ) : it.label === "تقرير جودة البيانات" ? (
-                <Link key={it.label} to="/data-quality" onClick={() => setOpen(false)} className="flex w-full items-center gap-3 rounded-xl px-4 py-2 text-sm transition hover:bg-primary/10">
-                  <it.icon className="h-4 w-4 text-primary" />{it.label}
-                </Link>
-              ) : (
-                <button key={it.label} onClick={it.action} className="flex w-full items-center gap-3 rounded-xl px-4 py-2 text-sm transition hover:bg-primary/10">
-                  <it.icon className="h-4 w-4 text-primary" />{it.label}
-                </button>
-              ),
-            )}
-
-            {user && (
-              <button
-                onClick={async () => {
-                  await logoutUserFn();
-                  queryClient.invalidateQueries({ queryKey: ["current-user"] });
-                  toast.success("تم تسجيل الخروج بنجاح");
-                  setOpen(false);
-                }}
-                className="mt-1 border-t border-border/40 pt-1.5 flex w-full items-center gap-3 rounded-xl px-4 py-2 text-sm text-destructive hover:bg-destructive/10"
-              >
-                <LogOut className="h-4 w-4" /> تسجيل الخروج
-              </button>
-            )}
-          </nav>
-        </>
-      )}
-      <SubscriptionModal isOpen={isSubscriptionOpen} onClose={() => setIsSubscriptionOpen(false)} user={user} />
-    </div>
-  );
-}
+const PLATFORM_FEATURES = [
+  {
+    icon: ShieldCheck,
+    title: "منيو وأسعار رسمية موثقة",
+    desc: "فحص وتوثيق دوري لكافة القوائم والأسعار — وداعاً للمفاجآت في الفاتورة.",
+  },
+  {
+    icon: Calculator,
+    title: "حاسبة خروجة دقيقة بالمليم",
+    desc: "حساب ضريبة القيمة المضافة (14%)، الخدمة (12%)، وتكلفة الفرد التقديرية.",
+  },
+  {
+    icon: Star,
+    title: "تقييم بيزي عادل ومحايد",
+    desc: "خوارزمية ذكية توازن بين جودة التقييم وعدد المقيمين لمنع التلاعب.",
+  },
+  {
+    icon: GitCompareArrows,
+    title: "مقارنة مباشرة جنباً إلى جنب",
+    desc: "قارن حتى 3 كافيهات في الأسعار ومستوى الهدوء وسرعة الواي فاي والخدمات.",
+  },
+];
 
 function Index() {
   const root = useRef<HTMLDivElement>(null);
@@ -236,6 +143,8 @@ function Index() {
   const [mood, setMood] = useState<number | null>(null);
   const moodRef = useRef(mood);
   moodRef.current = mood;
+  const navigate = useNavigate();
+  const [heroSearch, setHeroSearch] = useState("");
   const { openFavorites, openCompare, openSubscription } = useGlobalUI();
   const { data: allCafes = [] } = useSuspenseQuery(cafesQuery);
   const { data: authData } = useQuery({
@@ -246,6 +155,26 @@ function Index() {
   const user = authData?.user;
   const subscription = authData?.subscription;
 
+  const featuredCafes = useMemo(() => {
+    return [...allCafes]
+      .sort((a, b) => {
+        const bA = calculateBayesianRating(Number(a.rating ?? 4.0), Number(a.rating_count ?? 15));
+        const bB = calculateBayesianRating(Number(b.rating ?? 4.0), Number(b.rating_count ?? 15));
+        return bB - bA;
+      })
+      .slice(0, 6);
+  }, [allCafes]);
+
+  const handleHeroSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const query = heroSearch.trim();
+    if (query) {
+      navigate({ to: "/cafes", search: { q: query } as any });
+    } else {
+      navigate({ to: "/cafes" });
+    }
+  };
+
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger);
     const ctx = gsap.context(() => {
@@ -255,14 +184,15 @@ function Index() {
         .fromTo(".hero-line", { y: 35, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.1, duration: 0.6, clearProps: "all" }, "-=0.3")
         .fromTo(".hero-sub", { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, clearProps: "all" }, "-=0.3")
         .fromTo(".hero-rule", { scaleX: 0, transformOrigin: "right" }, { scaleX: 1, duration: 0.5, clearProps: "all" }, "-=0.2")
+        .fromTo(".hero-search-box", { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, clearProps: "all" }, "-=0.2")
         .fromTo(".mood-picker-box", { y: 25, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, clearProps: "all" }, "-=0.2")
         .fromTo(".mood", { y: 15, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.06, duration: 0.5, clearProps: "all" }, "-=0.3");
       gsap.to(".hero-text", {
-        yPercent: -30, opacity: 0.2, ease: "none",
+        yPercent: -20, opacity: 0.3, ease: "none",
         scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: true },
       });
       gsap.utils.toArray<HTMLElement>(".reveal").forEach((el) =>
-        gsap.from(el, { y: 60, opacity: 0, duration: 1, ease: "power3.out", scrollTrigger: { trigger: el, start: "top bottom-=40", once: true } }),
+        gsap.from(el, { y: 40, opacity: 0, duration: 0.8, ease: "power3.out", scrollTrigger: { trigger: el, start: "top bottom-=40", once: true } }),
       );
       gsap.from(".cat", { y: 50, opacity: 0, stagger: 0.1, duration: 0.9, ease: "power3.out", clearProps: "transform,opacity", scrollTrigger: { trigger: ".cats", start: "top bottom-=40", once: true } });
       addEventListener("load", () => ScrollTrigger.refresh());
@@ -313,7 +243,7 @@ function Index() {
   return (
     <div ref={root} className="min-h-screen overflow-hidden bg-background text-foreground">
       {/* HERO & FIRST SCREEN VIEWPORT */}
-      <section className="hero relative h-[100svh] min-h-[100svh] overflow-hidden flex flex-col justify-between">
+      <section className="hero relative min-h-[100svh] overflow-hidden flex flex-col justify-between pb-6">
         <div className="hero-canvas absolute inset-0">
           <HeroVideoBackground
             posterSrc="/hero-poster.webp"
@@ -321,27 +251,72 @@ function Index() {
             videoWebmSrc="/hero-video.webm"
           />
         </div>
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-background/40 to-background/85 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-background/40 to-background/90 pointer-events-none" />
         <div className="bg-fade absolute inset-x-0 bottom-0 h-44 sm:h-56 pointer-events-none" />
 
-        {/* Top Section: Hero Typography */}
+        {/* Top Section: Hero Typography & Search */}
         <div className="w-full">
-          <div className="hero-text relative z-10 mx-auto mt-6 sm:mt-12 md:mt-20 max-w-6xl px-4 sm:px-5">
+          <div className="hero-text relative z-10 mx-auto mt-4 sm:mt-8 md:mt-12 max-w-6xl px-4 sm:px-5">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1 text-xs font-semibold text-primary mb-3">
+              <Sparkles className="h-3.5 w-3.5" /> المنصة الرسمية الموثقة لكافيهات القاهرة
+            </div>
             <h1 className="font-display font-bold leading-tight">
               <span className="block overflow-hidden"><span className="hero-line block text-4xl sm:text-5xl md:text-7xl">اكتشف</span></span>
               <span className="block overflow-hidden pb-1 sm:pb-3"><span className="hero-line text-gold block text-5xl sm:text-6xl md:text-8xl">مكانك المثالي</span></span>
             </h1>
-            <p className="hero-sub mt-2 sm:mt-3 max-w-sm text-sm sm:text-base md:text-xl text-muted-foreground">واعرف ميزانيتك، واستمتع بخروجة على مزاجك.</p>
-            <div className="hero-rule bg-gold mt-2.5 sm:mt-5 h-px w-28 sm:w-40" />
+            <p className="hero-sub mt-2 sm:mt-3 max-w-xl text-sm sm:text-base md:text-lg text-muted-foreground leading-relaxed">
+              واعرف ميزانيتك، تصفح المنيو الرسمي الموثق، واستمتع بخروجة راقية ومحسوبة بالمليم دون أي مفاجآت.
+            </p>
+            <div className="hero-rule bg-gold mt-2.5 sm:mt-4 h-px w-28 sm:w-40" />
+
+            {/* Prominent Search Bar */}
+            <div className="hero-search-box mt-5 sm:mt-6 max-w-xl">
+              <form onSubmit={handleHeroSearch} className="relative flex items-center">
+                <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 sm:h-5 w-4 sm:w-5 text-primary pointer-events-none" />
+                <input
+                  type="search"
+                  value={heroSearch}
+                  onChange={(e) => setHeroSearch(e.target.value)}
+                  placeholder="ابحث باسم الكافيه، المكان، أو المنطقة (مثل Waterway، زايد)..."
+                  className="w-full rounded-2xl border border-border/80 bg-background/85 backdrop-blur-md py-3 sm:py-3.5 pr-11 pl-24 text-xs sm:text-sm text-foreground shadow-xl placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
+                  dir="rtl"
+                />
+                <Button
+                  type="submit"
+                  variant="gold"
+                  size="sm"
+                  className="absolute left-1.5 sm:left-2 top-1/2 -translate-y-1/2 rounded-xl text-xs font-bold px-3 sm:px-4 py-1.5 h-8 sm:h-9"
+                >
+                  ابحث الآن
+                </Button>
+              </form>
+
+              {/* Quick Search Suggestions */}
+              <div className="mt-2.5 flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <span className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
+                  الأكثر بحثاً:
+                </span>
+                {QUICK_SEARCH_SUGGESTIONS.map((tag) => (
+                  <button
+                    key={tag.label}
+                    type="button"
+                    onClick={() => navigate({ to: "/cafes", search: { q: tag.query } as any })}
+                    className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card/60 backdrop-blur-sm px-2.5 py-0.5 text-[11px] font-medium text-foreground/80 hover:text-primary hover:border-primary/40 hover:bg-card/90 transition cursor-pointer"
+                  >
+                    {tag.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Bottom Section: Mood Picker anchored at the bottom of the first screen */}
-        <div className="relative z-20 mx-auto w-full max-w-6xl px-3 sm:px-5 pb-3.5 sm:pb-6">
+        <div className="relative z-20 mx-auto w-full max-w-6xl px-3 sm:px-5 pt-6 pb-2">
           <section className="mood-picker-box mood-picker relative overflow-hidden" aria-label="اختر مزاجك">
             <div className="mood-content relative">
               <div className="flex items-center justify-between">
-                <h2 className="mood-heading flex items-center gap-2 font-display text-base sm:text-lg md:text-xl">اختر مزاجك:</h2>
+                <h2 className="mood-heading flex items-center gap-2 font-display text-base sm:text-lg md:text-xl">اختر مزاجك للخروجة:</h2>
                 {mood != null && (
                   <button onClick={() => setMood(null)} className="flex items-center gap-1 text-xs sm:text-sm text-primary">
                     <X className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> كل الأجواء
@@ -373,8 +348,128 @@ function Index() {
       </section>
 
       {/* MAIN CONTENT (SCROLLABLE BELOW THE INITIAL 100svh FOLD) */}
-      <main id="areas" className="relative z-10 mx-auto w-full max-w-6xl space-y-12 sm:space-y-16 px-3 sm:px-5 pt-8 sm:pt-14 pb-10">
-        {/* CALCULATOR */}
+      <main id="areas" className="relative z-10 mx-auto w-full max-w-6xl space-y-14 sm:space-y-20 px-3 sm:px-5 pt-8 sm:pt-14 pb-20">
+
+        {/* 1. FEATURED CAFES */}
+        <section aria-label="كافيهات مميزة" className="space-y-5">
+          <div className="reveal flex flex-wrap items-end justify-between gap-3 border-b border-border/60 pb-3">
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wider text-primary">مختارات النخبة</span>
+              <h2 className="font-display text-2xl md:text-3xl font-bold">أبرز كافيهات القاهرة الموثقة</h2>
+            </div>
+            <Link
+              to="/cafes"
+              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-primary hover:underline"
+            >
+              عرض كل الكافيهات ({allCafes.length}) <ChevronLeft className="h-4 w-4" />
+            </Link>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {featuredCafes.map((c, idx) => (
+              <CafeCard key={c.id} c={c} priority={idx < 3} />
+            ))}
+          </div>
+        </section>
+
+        {/* 2. COVERAGE AREAS */}
+        <section aria-label="مناطق التغطية" className="space-y-5">
+          <div className="reveal border-b border-border/60 pb-3">
+            <span className="text-xs font-semibold uppercase tracking-wider text-primary">خريطة التغطية</span>
+            <h2 className="font-display text-2xl md:text-3xl font-bold">مناطق التغطية المعتمدة</h2>
+          </div>
+
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
+            {COVERAGE_AREAS.map((a) => {
+              const count = allCafes.filter((c) =>
+                a.key === "fifth_settlement"
+                  ? c.area_class === "fifth_settlement"
+                  : a.key === "sheikh_zayed"
+                    ? c.area_class === "sheikh_zayed"
+                    : c.area_class.startsWith("new_cairo")
+              ).length;
+
+              return (
+                <div
+                  key={a.key}
+                  onClick={() => navigate({ to: "/cafes", search: { area: a.key } as any })}
+                  className="group relative cursor-pointer overflow-hidden rounded-2xl border border-border/70 bg-card/50 p-5 transition hover:border-primary/50 hover:bg-card/80 hover:shadow-lg"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
+                      <MapPin className="h-5 w-5" />
+                    </span>
+                    <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
+                      {count} كافيه
+                    </span>
+                  </div>
+                  <h3 className="mt-4 font-display text-lg sm:text-xl font-bold text-foreground group-hover:text-primary transition">
+                    {a.title}
+                  </h3>
+                  <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{a.desc}</p>
+                  <div className="mt-3 flex items-center gap-1 text-xs font-medium text-primary">
+                    استكشف الأماكن <ChevronLeft className="h-3.5 w-3.5 group-hover:-translate-x-1 transition" />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* 3. PLATFORM ADVANTAGES */}
+        <section aria-label="مميزات المنصة" className="space-y-5">
+          <div className="reveal border-b border-border/60 pb-3">
+            <span className="text-xs font-semibold uppercase tracking-wider text-primary">لماذا CaféLens؟</span>
+            <h2 className="font-display text-2xl md:text-3xl font-bold">معايير الدقة والشفافية في خروجتك</h2>
+          </div>
+
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            {PLATFORM_FEATURES.map((f) => (
+              <div key={f.title} className="rounded-2xl border border-border/70 bg-card/40 p-4 sm:p-5">
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary mb-3">
+                  <f.icon className="h-5 w-5" />
+                </span>
+                <h3 className="font-display text-base font-bold text-foreground">{f.title}</h3>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{f.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* 4. VIP SUBSCRIPTION CALLOUT */}
+        <section aria-label="الاشتراك الفاخر" className="rounded-3xl border border-primary/40 bg-gradient-to-r from-card/90 via-primary/5 to-card/90 p-6 sm:p-8 shadow-xl">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-2 max-w-xl">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-0.5 text-xs font-bold text-primary">
+                <Crown className="h-3.5 w-3.5" /> باقة العضوية المميزة
+              </span>
+              <h2 className="font-display text-2xl sm:text-3xl font-bold text-foreground">
+                تصفح المنيو والأسعار الرسمية دون حدود
+              </h2>
+              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                اشترك في باقة CaféLens الفاخرة للاطلاع على القوائم المصورة، وتحديثات الأسعار الفورية، وحاسبة الفواتير الدقيقة بـ 100 ج.م فقط شهرياً عبر فودافون كاش أو إنستاباي.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 shrink-0">
+              <Button
+                variant="gold"
+                size="lg"
+                onClick={openSubscription}
+                className="gap-2 font-bold shadow-glow"
+              >
+                <Crown className="h-4 w-4" /> اشترك الآن (100 ج.م)
+              </Button>
+              <Link
+                to="/cafes"
+                className="inline-flex items-center justify-center rounded-xl border border-border/80 bg-card/70 px-5 py-2.5 text-xs sm:text-sm font-semibold hover:bg-card/90 transition"
+              >
+                تصفح الكافيهات
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* 5. CALCULATOR SECTION */}
         <CalculatorSection
           onOpenCompare={openCompare}
           onOpenFavorites={openFavorites}
@@ -383,6 +478,7 @@ function Index() {
           onRequestSubscription={openSubscription}
         />
 
+        {/* 6. EXPLORE & TONIGHT PICK */}
         <Explore mood={mood} area={area} />
       </main>
     </div>
@@ -391,37 +487,123 @@ function Index() {
 
 function CafeCard({ c, reason, priority = false }: { c: CafeListItem; reason?: string | undefined; priority?: boolean }) {
   const photo = (c.photos as CafePhoto[])[0];
+  const [fav, setFav] = useState(() => isFavorite(c.id));
+  const [inCompare, setInCompare] = useState(() => isInCompareList(c.id));
+
+  useEffect(() => {
+    const onStorage = () => {
+      setFav(isFavorite(c.id));
+      setInCompare(isInCompareList(c.id));
+    };
+    window.addEventListener("cafelens_storage_update", onStorage);
+    return () => window.removeEventListener("cafelens_storage_update", onStorage);
+  }, [c.id]);
+
+  const handleToggleFav = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const next = toggleFavorite(c.id);
+    setFav(next);
+  };
+
+  const handleToggleCompare = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const res = toggleCompareCafe(c.id);
+    setInCompare(res.inList);
+    if (res.error) {
+      toast.error(res.error);
+    } else {
+      toast.success(res.inList ? "تمت إضافة الكافيه إلى المقارنة" : "تمت إزالة الكافيه من المقارنة");
+    }
+  };
+
+  const ratingNum = Number(c.rating ?? 4.0);
+  const reviewsNum = Number(c.rating_count ?? 10);
+  const bayesian = calculateBayesianRating(ratingNum, reviewsNum);
+
   return (
-    <Link to="/cafes/$slug" params={{ slug: c.slug }} className="cafe-card group block">
-      <div className="cafe-media">
+    <Link to="/cafes/$slug" params={{ slug: c.slug }} className="cafe-card group block relative rounded-2xl border border-border/70 bg-card overflow-hidden hover:border-primary/50 transition duration-300 shadow-sm hover:shadow-lg">
+      <div className="cafe-media relative h-52 sm:h-56 w-full overflow-hidden bg-muted">
         <SmartImage
           src={photo?.url}
           alt={c.name}
           priority={priority}
-          className="h-full w-full object-cover"
+          className="h-full w-full object-cover group-hover:scale-105 transition duration-500"
         />
-        <span className="cafe-media-shade" />
-        {c.rating != null && (
-          <span className="cafe-chip right-3"><Star className="h-3 w-3 fill-primary text-primary" />{Number(c.rating).toFixed(1)}</span>
-        )}
-        {c.price_level != null && <span className="cafe-chip left-3 font-latin text-primary">{"$".repeat(c.price_level)}</span>}
+        <span className="cafe-media-shade absolute inset-0 bg-gradient-to-t from-background via-background/25 to-transparent" />
+
+        {/* Action Buttons: Favorite and Compare on top right */}
+        <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={handleToggleFav}
+            aria-label={fav ? "إزالة من المفضلة" : "إضافة للمفضلة"}
+            className={`grid h-8 w-8 place-items-center rounded-full backdrop-blur-md transition ${fav
+                ? "bg-rose-500/90 text-white shadow-md shadow-rose-500/30"
+                : "bg-background/70 text-foreground/80 hover:bg-background hover:text-rose-500"
+              }`}
+          >
+            <Heart className={`h-4 w-4 ${fav ? "fill-current" : ""}`} />
+          </button>
+          <button
+            type="button"
+            onClick={handleToggleCompare}
+            aria-label={inCompare ? "إزالة من المقارنة" : "إضافة للمقارنة"}
+            className={`grid h-8 w-8 place-items-center rounded-full backdrop-blur-md transition ${inCompare
+                ? "bg-primary text-primary-foreground shadow-md shadow-primary/30"
+                : "bg-background/70 text-foreground/80 hover:bg-background hover:text-primary"
+              }`}
+          >
+            <GitCompareArrows className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Rating and Price chips on top left */}
+        <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5">
+          {c.price_level != null && (
+            <span className="rounded-full bg-background/80 backdrop-blur-md px-2 py-0.5 text-xs font-mono font-bold text-primary">
+              {"$".repeat(c.price_level)}
+            </span>
+          )}
+          <span className="inline-flex items-center gap-1 rounded-full bg-background/80 backdrop-blur-md px-2.5 py-0.5 text-xs font-bold text-foreground">
+            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+            <span>★{bayesian}</span>
+            <span className="text-[10px] text-muted-foreground font-normal">({reviewsNum})</span>
+          </span>
+        </div>
+
+        {/* Title & Area anchored at bottom of media */}
         <div className="absolute inset-x-4 bottom-3">
-          <h3 className="font-latin text-2xl font-semibold leading-tight" dir="auto">{c.name}</h3>
-          <p className="mt-0.5 text-xs text-foreground/75">
-            <MapPin className="ml-1 inline h-3 w-3" />{AREA_CLASS_LABELS[c.area_class] ?? c.area}
+          <h3 className="font-latin text-xl sm:text-2xl font-bold leading-tight text-white drop-shadow-md" dir="auto">
+            {c.name}
+          </h3>
+          <p className="mt-1 flex items-center gap-1 text-xs text-zinc-300">
+            <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+            <span className="truncate">{AREA_CLASS_LABELS[c.area_class] ?? c.area}</span>
           </p>
         </div>
       </div>
-      <div className="space-y-3 px-4 pb-4 pt-4">
-        <div className="flex flex-wrap gap-1.5">
-          {c.services.slice(0, 3).map((t) => <span key={t} className="cafe-tag">{t}</span>)}
+
+      <div className="space-y-3 p-4">
+        {/* Services & amenities pills */}
+        <div className="flex flex-wrap gap-1.5 min-h-[24px]">
+          {c.services.slice(0, 3).map((t) => (
+            <span key={t} className="rounded-md bg-secondary/80 px-2 py-0.5 text-[11px] font-medium text-secondary-foreground">
+              {t}
+            </span>
+          ))}
         </div>
-        {reason && <p className="text-xs text-primary">مناسب لطلبك لأنه {reason}.</p>}
+
+        {reason && <p className="text-xs text-primary font-medium">مناسب لطلبك لأنه {reason}.</p>}
+
         <div className="flex items-center justify-between gap-2 border-t border-border/60 pt-3">
           <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-            <ShieldCheck className="h-3.5 w-3.5 text-primary" /> بيانات Google Maps
+            <ShieldCheck className="h-3.5 w-3.5 text-primary" /> بيانات موثقة
           </span>
-          <span className="cafe-cta">التفاصيل <ChevronLeft className="h-3.5 w-3.5" /></span>
+          <span className="inline-flex items-center gap-1 text-xs font-bold text-primary group-hover:-translate-x-1 transition">
+            التفاصيل والمنيو <ChevronLeft className="h-3.5 w-3.5" />
+          </span>
         </div>
       </div>
     </Link>
@@ -745,27 +927,24 @@ function CalculatorSection({
               <button
                 type="button"
                 onClick={() => { setSelectedArea("all"); setCafeId(null); }}
-                className={`rounded-xl px-2 py-2 text-center text-xs font-semibold transition ${
-                  selectedArea === "all" ? "bg-primary text-primary-foreground shadow-sm font-bold" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                }`}
+                className={`rounded-xl px-2 py-2 text-center text-xs font-semibold transition ${selectedArea === "all" ? "bg-primary text-primary-foreground shadow-sm font-bold" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                  }`}
               >
                 كل المناطق
               </button>
               <button
                 type="button"
                 onClick={() => { setSelectedArea("sheikh_zayed"); setCafeId(null); }}
-                className={`flex items-center justify-center gap-1 rounded-xl px-2 py-2 text-center text-xs font-semibold transition ${
-                  selectedArea === "sheikh_zayed" ? "bg-primary text-primary-foreground shadow-sm font-bold" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                }`}
+                className={`flex items-center justify-center gap-1 rounded-xl px-2 py-2 text-center text-xs font-semibold transition ${selectedArea === "sheikh_zayed" ? "bg-primary text-primary-foreground shadow-sm font-bold" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                  }`}
               >
                 <MapPin className="h-3 w-3 shrink-0" /> <span className="truncate">الشيخ زايد</span>
               </button>
               <button
                 type="button"
                 onClick={() => { setSelectedArea("tagamoa"); setCafeId(null); }}
-                className={`flex items-center justify-center gap-1 rounded-xl px-2 py-2 text-center text-xs font-semibold transition ${
-                  selectedArea === "tagamoa" ? "bg-primary text-primary-foreground shadow-sm font-bold" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                }`}
+                className={`flex items-center justify-center gap-1 rounded-xl px-2 py-2 text-center text-xs font-semibold transition ${selectedArea === "tagamoa" ? "bg-primary text-primary-foreground shadow-sm font-bold" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                  }`}
               >
                 <MapPin className="h-3 w-3 shrink-0" /> <span className="truncate">التجمع الخامس</span>
               </button>
@@ -779,27 +958,24 @@ function CalculatorSection({
               <button
                 type="button"
                 onClick={() => setItemType("drink")}
-                className={`flex items-center justify-center gap-1 rounded-xl px-2 py-2 text-center text-xs font-semibold transition ${
-                  itemType === "drink" ? "bg-primary text-primary-foreground shadow-sm font-bold" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                }`}
+                className={`flex items-center justify-center gap-1 rounded-xl px-2 py-2 text-center text-xs font-semibold transition ${itemType === "drink" ? "bg-primary text-primary-foreground shadow-sm font-bold" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                  }`}
               >
                 <Coffee className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">مشروبات وقهوة</span>
               </button>
               <button
                 type="button"
                 onClick={() => setItemType("food")}
-                className={`flex items-center justify-center gap-1 rounded-xl px-2 py-2 text-center text-xs font-semibold transition ${
-                  itemType === "food" ? "bg-primary text-primary-foreground shadow-sm font-bold" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                }`}
+                className={`flex items-center justify-center gap-1 rounded-xl px-2 py-2 text-center text-xs font-semibold transition ${itemType === "food" ? "bg-primary text-primary-foreground shadow-sm font-bold" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                  }`}
               >
                 <Utensils className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">أكل وحلويات</span>
               </button>
               <button
                 type="button"
                 onClick={() => setItemType("combo")}
-                className={`flex items-center justify-center gap-1 rounded-xl px-2 py-2 text-center text-xs font-semibold transition ${
-                  itemType === "combo" ? "bg-primary text-primary-foreground shadow-sm font-bold" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                }`}
+                className={`flex items-center justify-center gap-1 rounded-xl px-2 py-2 text-center text-xs font-semibold transition ${itemType === "combo" ? "bg-primary text-primary-foreground shadow-sm font-bold" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                  }`}
               >
                 <Sparkles className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">ميكس خروجة</span>
               </button>
@@ -828,11 +1004,10 @@ function CalculatorSection({
                     key={fac.key}
                     type="button"
                     onClick={() => toggleFacility(fac.key)}
-                    className={`flex items-center gap-1 rounded-xl px-2.5 py-1 text-xs transition border ${
-                      isSelected
+                    className={`flex items-center gap-1 rounded-xl px-2.5 py-1 text-xs transition border ${isSelected
                         ? "bg-primary/20 text-primary border-primary/50 font-bold"
                         : "bg-secondary/20 text-muted-foreground border-border/40 hover:bg-secondary/50 hover:text-foreground"
-                    }`}
+                      }`}
                   >
                     {isSelected && <Check className="h-3 w-3 text-primary" />}
                     {fac.label}
@@ -871,11 +1046,10 @@ function CalculatorSection({
                   key={preset}
                   type="button"
                   onClick={() => setBudget(preset)}
-                  className={`rounded-lg px-2.5 py-1 text-xs transition border ${
-                    budget === preset
+                  className={`rounded-lg px-2.5 py-1 text-xs transition border ${budget === preset
                       ? "bg-primary text-primary-foreground font-bold border-primary shadow-sm"
                       : "bg-background/40 text-muted-foreground border-border/40 hover:text-foreground hover:bg-secondary/40"
-                  }`}
+                    }`}
                 >
                   {preset} ج.م
                 </button>
@@ -896,11 +1070,10 @@ function CalculatorSection({
                     key={t}
                     type="button"
                     onClick={() => setTransportationBudget(t)}
-                    className={`rounded-xl py-1 text-xs transition border ${
-                      transportationBudget === t
+                    className={`rounded-xl py-1 text-xs transition border ${transportationBudget === t
                         ? "bg-primary text-primary-foreground font-bold border-primary"
                         : "bg-background/40 text-muted-foreground border-border/40 hover:bg-secondary/40 hover:text-foreground"
-                    }`}
+                      }`}
                   >
                     {t === 0 ? "بدون" : `${t} ج.م`}
                   </button>
@@ -1011,9 +1184,8 @@ function CalculatorSection({
                         setSearchTerm(c.name);
                         setIsSearchOpen(false);
                       }}
-                      className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-right text-xs transition hover:bg-primary/10 ${
-                        c.id === activeCafe.id ? "bg-primary/15 font-medium text-primary" : "text-foreground"
-                      }`}
+                      className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-right text-xs transition hover:bg-primary/10 ${c.id === activeCafe.id ? "bg-primary/15 font-medium text-primary" : "text-foreground"
+                        }`}
                     >
                       <div className="flex flex-col text-right min-w-0 pr-1">
                         <span className="font-medium truncate" dir="auto">{c.name}</span>
@@ -1044,33 +1216,30 @@ function CalculatorSection({
               <button
                 type="button"
                 onClick={() => setRankingStrategy("smart")}
-                className={`rounded-xl px-2.5 py-1 text-xs font-medium transition ${
-                  rankingStrategy === "smart"
+                className={`rounded-xl px-2.5 py-1 text-xs font-medium transition ${rankingStrategy === "smart"
                     ? "bg-primary text-primary-foreground font-bold shadow-sm"
                     : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
-                }`}
+                  }`}
               >
                 🎯 الأنسب لميزانيتك
               </button>
               <button
                 type="button"
                 onClick={() => setRankingStrategy("rating")}
-                className={`rounded-xl px-2.5 py-1 text-xs font-medium transition ${
-                  rankingStrategy === "rating"
+                className={`rounded-xl px-2.5 py-1 text-xs font-medium transition ${rankingStrategy === "rating"
                     ? "bg-primary text-primary-foreground font-bold shadow-sm"
                     : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
-                }`}
+                  }`}
               >
                 ⭐ الأعلى تقييماً
               </button>
               <button
                 type="button"
                 onClick={() => setRankingStrategy("budget")}
-                className={`rounded-xl px-2.5 py-1 text-xs font-medium transition ${
-                  rankingStrategy === "budget"
+                className={`rounded-xl px-2.5 py-1 text-xs font-medium transition ${rankingStrategy === "budget"
                     ? "bg-primary text-primary-foreground font-bold shadow-sm"
                     : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
-                }`}
+                  }`}
               >
                 💰 الأكثر توفيراً
               </button>
@@ -1097,11 +1266,10 @@ function CalculatorSection({
                     key={sc.cafe.id}
                     type="button"
                     onClick={() => setCafeId(sc.cafe.id)}
-                    className={`flex shrink-0 items-center gap-2 rounded-xl px-3 py-1.5 text-right text-xs transition border ${
-                      isSelected
+                    className={`flex shrink-0 items-center gap-2 rounded-xl px-3 py-1.5 text-right text-xs transition border ${isSelected
                         ? "bg-primary text-primary-foreground border-primary font-bold shadow-sm"
                         : "border-border/40 bg-card/40 text-muted-foreground hover:text-foreground hover:bg-card/80"
-                    }`}
+                      }`}
                   >
                     <span className="text-[10px] opacity-70">#{idx + 1}</span>
                     <span className="font-semibold truncate max-w-[120px] sm:max-w-[150px]" dir="auto">{sc.cafe.name}</span>
@@ -1148,9 +1316,8 @@ function CalculatorSection({
                   <button
                     type="button"
                     onClick={() => toggleFavorite(activeCafe.id)}
-                    className={`grid h-8 w-8 place-items-center rounded-full bg-black/45 backdrop-blur-md border border-white/10 transition ${
-                      isCurrentFav ? "text-rose-400" : "text-white/80 hover:text-rose-400"
-                    }`}
+                    className={`grid h-8 w-8 place-items-center rounded-full bg-black/45 backdrop-blur-md border border-white/10 transition ${isCurrentFav ? "text-rose-400" : "text-white/80 hover:text-rose-400"
+                      }`}
                     title={isCurrentFav ? "في المفضلة" : "أضف للمفضلة"}
                     aria-label={isCurrentFav ? "إزالة من المفضلة" : "إضافة للمفضلة"}
                   >
@@ -1160,9 +1327,8 @@ function CalculatorSection({
                   <button
                     type="button"
                     onClick={() => toggleCompareCafe(activeCafe.id)}
-                    className={`grid h-8 w-8 place-items-center rounded-full bg-black/45 backdrop-blur-md border border-white/10 transition ${
-                      isCurrentInCompare ? "text-primary" : "text-white/80 hover:text-primary"
-                    }`}
+                    className={`grid h-8 w-8 place-items-center rounded-full bg-black/45 backdrop-blur-md border border-white/10 transition ${isCurrentInCompare ? "text-primary" : "text-white/80 hover:text-primary"
+                      }`}
                     title={isCurrentInCompare ? "في المقارنة" : "مقارنة"}
                     aria-label={isCurrentInCompare ? "إزالة من المقارنة" : "إضافة للمقارنة"}
                   >
@@ -1398,11 +1564,10 @@ function CalculatorSection({
                   return (
                     <div
                       key={sc.cafe.id}
-                      className={`relative flex items-center gap-2.5 rounded-xl border p-2 text-right transition ${
-                        isCurrent
+                      className={`relative flex items-center gap-2.5 rounded-xl border p-2 text-right transition ${isCurrent
                           ? "border-primary bg-primary/15 shadow-sm font-bold"
                           : "border-border/40 bg-card/40 hover:border-primary/40 hover:bg-card/70"
-                      }`}
+                        }`}
                     >
                       <button
                         type="button"
@@ -1513,12 +1678,12 @@ function CalculatorSection({
                     catKey === "hot"
                       ? "مشروبات ساخنة ☕"
                       : catKey === "cold"
-                      ? "مشروبات مثلجة وباردة 🧋"
-                      : catKey === "specialty"
-                      ? "قهوة مقطرة مختصة ⚗️"
-                      : catKey === "food"
-                      ? "سندوتشات ومخبوزات 🥪"
-                      : "حلويات وكيك 🍰";
+                        ? "مشروبات مثلجة وباردة 🧋"
+                        : catKey === "specialty"
+                          ? "قهوة مقطرة مختصة ⚗️"
+                          : catKey === "food"
+                            ? "سندوتشات ومخبوزات 🥪"
+                            : "حلويات وكيك 🍰";
 
                   return (
                     <div key={catKey} className="space-y-2.5">
@@ -1747,29 +1912,6 @@ function Explore({ mood, area }: { mood: number | null; area: AreaFilter }) {
         <Shuffle className="h-5 w-5" /> {tonight ? "رشّح مكان تاني" : "رشّحلي دلوقتي"}
       </button>
     </section>
-
-
-
-    {/* TRUST */}
-    <section className="reveal grid gap-3 md:grid-cols-3">
-      {[
-        { i: ShieldCheck, t: "أسعار موثّقة", d: "كل سعر عليه مصدره وتاريخ آخر تحقق — ولا سعر بدون مصدر." },
-        { i: Laptop, t: "تقييم العمل والمذاكرة", d: "واي فاي، مقابس، وهدوء — كل خاصية لوحدها وبحالة توثيقها." },
-        { i: UsersRound, t: "قرار جماعي", d: "شارك الخروجة مع أصحابك واختاروا سوا — قريبًا." },
-      ].map((x) => (
-        <div key={x.t} className="rounded-[1.5rem] border border-border bg-card p-5">
-          <x.i className="h-6 w-6 text-primary" strokeWidth={1.4} />
-          <h3 className="mt-3 font-display text-lg">{x.t}</h3>
-          <p className="mt-1 text-sm text-muted-foreground">{x.d}</p>
-        </div>
-      ))}
-    </section>
-
-    <footer className="reveal border-t border-border pt-6 text-center text-sm text-muted-foreground">
-      <div className="mb-2 flex items-center justify-center gap-2"><MapPin className="h-4 w-4" /> أحياءنا المتاحة حالياً:</div>
-      التجمع الخامس • القاهرة الجديدة • الشيخ زايد
-      <div className="mt-4 font-latin text-xs tracking-[0.3em]">CaféLens © 2026</div>
-    </footer>
   </>;
 }
 
