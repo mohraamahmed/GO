@@ -24,9 +24,16 @@ export function FavoritesDrawer({ isOpen, onClose, allCafes }: FavoritesDrawerPr
       setFavIds(getFavorites());
       setPlans(getSavedPlans());
     };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
     window.addEventListener("cafelens_storage_update", onStorage);
-    return () => window.removeEventListener("cafelens_storage_update", onStorage);
-  }, [isOpen]);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("cafelens_storage_update", onStorage);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   const favoriteCafes = useMemo(() => {
     return favIds
