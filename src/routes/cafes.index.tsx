@@ -138,7 +138,7 @@ function CafesPage() {
       // Area filter
       if (areaFilter && areaFilter !== "all") {
         if (areaFilter === "new_cairo") {
-          if (!c.area_class.startsWith("new_cairo")) return false;
+          if (!c.area_class.startsWith("new_cairo") && c.area_class !== "fifth_settlement") return false;
         } else if (c.area_class !== areaFilter) {
           return false;
         }

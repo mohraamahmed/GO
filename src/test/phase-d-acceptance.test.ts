@@ -104,14 +104,28 @@ describe("Phase D Acceptance — Bill Calculator Scenarios", () => {
     expect(bill.grandTotal).toBe(243);
   });
 
-  it("Scenario 5: Multi-person split verification", () => {
+  it("Scenario 5: Multi-person split verification (Total bill divided across 1, 2, 3, 4, 5 people)", () => {
     const subtotal = 190;
     const bill = calculateBillWithFees(subtotal, { hasServiceCharge: true, hasVat: true });
-    const people = 3;
-    const totalForGroup = bill.grandTotal * people;
-    expect(totalForGroup).toBe(243 * 3); // 729 EGP
-    const perPerson = totalForGroup / people;
-    expect(perPerson).toBe(243);
+    expect(bill.subtotal).toBe(190);
+    expect(bill.serviceAmount).toBe(23);
+    expect(bill.vatAmount).toBe(30);
+    expect(bill.grandTotal).toBe(243);
+
+    // 1 Person: pays full bill
+    expect(Number((bill.grandTotal / 1).toFixed(2))).toBe(243);
+
+    // 2 People: 243 / 2 = 121.50 EGP
+    expect(Number((bill.grandTotal / 2).toFixed(2))).toBe(121.5);
+
+    // 3 People: 243 / 3 = 81.00 EGP
+    expect(Number((bill.grandTotal / 3).toFixed(2))).toBe(81);
+
+    // 4 People: 243 / 4 = 60.75 EGP (Top priority user correction)
+    expect(Number((bill.grandTotal / 4).toFixed(2))).toBe(60.75);
+
+    // 5 People: 243 / 5 = 48.60 EGP
+    expect(Number((bill.grandTotal / 5).toFixed(2))).toBe(48.6);
   });
 
   it("Scenario 6: Service-only and VAT-only options", () => {
@@ -154,15 +168,37 @@ describe("Phase D Acceptance — Data Integrity & Real Sources", () => {
     }
   });
 
-  it("verifies area counts match coverage areas dynamically", () => {
+  it("verifies area counts match coverage areas dynamically without double-counting", () => {
     const cafes = LOCAL_CAFES as unknown as CafeListItem[];
     const fifthSettlement = cafes.filter((c) => c.area_class === "fifth_settlement").length;
     const sheikhZayed = cafes.filter((c) => c.area_class === "sheikh_zayed").length;
+    const newCairoRest = cafes.filter((c) => c.area_class.startsWith("new_cairo")).length;
     const newCairoTotal = cafes.filter((c) => c.area_class.startsWith("new_cairo") || c.area_class === "fifth_settlement").length;
 
     expect(fifthSettlement).toBe(57);
     expect(sheikhZayed).toBe(140);
+    expect(newCairoRest).toBe(302);
+    // Mutually exclusive partition sum: 57 + 302 + 140 = 499 (Zero double-counting)
+    expect(fifthSettlement + newCairoRest + sheikhZayed).toBe(499);
+    // Overarching New Cairo region: 302 + 57 = 359
     expect(newCairoTotal).toBe(359);
+  });
+
+  it("verifies cafes with duplicate brand names have distinct exact coordinates and CIDs", () => {
+    const cafes = LOCAL_CAFES as unknown as CafeListItem[];
+    const thirtyNorth = cafes.filter((c) => c.name.toLowerCase().includes("30 north"));
+    expect(thirtyNorth.length).toBeGreaterThanOrEqual(2);
+
+    const b1 = thirtyNorth[0]!;
+    const b2 = thirtyNorth[1]!;
+
+    expect(b1.id).not.toBe(b2.id);
+    expect(b1.maps_url).not.toBe(b2.maps_url);
+    expect(typeof (b1 as any).lat).toBe("number");
+    expect(typeof (b1 as any).lng).toBe("number");
+    expect(typeof (b2 as any).lat).toBe("number");
+    expect(typeof (b2 as any).lng).toBe("number");
+    expect((b1 as any).lat).not.toBe((b2 as any).lat);
   });
 
   it("verifies top Bayesian cafes are mathematically ranked from true ratings", () => {

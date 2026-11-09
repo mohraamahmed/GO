@@ -139,10 +139,15 @@ function CafePage() {
   const verification = getCafeVerification(c as unknown as CafeListItem);
   const photos = ((c.photos as CafePhoto[]) || []).filter((p) => p.url);
 
-  // Reliable Map URLs (Standard Google embed requiring NO API KEY + direct navigation)
+  // Reliable Map URLs using exact coordinates when available
+  const hasCoordinates = typeof c.lat === "number" && typeof c.lng === "number";
   const mapSearchQuery = encodeURIComponent(`${c.name} ${c.address || c.area || "القاهرة"}`);
-  const mapEmbedUrl = `https://maps.google.com/maps?q=${mapSearchQuery}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
-  const googleMapsNavUrl = c.maps_url || `https://www.google.com/maps/search/?api=1&query=${mapSearchQuery}`;
+  const mapEmbedUrl = hasCoordinates
+    ? `https://maps.google.com/maps?q=${c.lat},${c.lng}&hl=ar&z=16&output=embed`
+    : `https://maps.google.com/maps?q=${mapSearchQuery}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
+  const googleMapsNavUrl = c.maps_url || (hasCoordinates
+    ? `https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}`
+    : `https://www.google.com/maps/search/?api=1&query=${mapSearchQuery}`);
 
   // Menu items resolution
   const menuData: MenuItem[] = useMemo(() => {
@@ -179,6 +184,12 @@ function CafePage() {
   const billFees = useMemo(() => {
     return calculateBillWithFees(rawSubtotal, { hasServiceCharge, hasVat });
   }, [rawSubtotal, hasServiceCharge, hasVat]);
+
+  // Exact per-person split (divides total bill by people count)
+  const perPersonAmount = useMemo(() => {
+    const count = Math.max(1, peopleCount);
+    return Number((billFees.grandTotal / count).toFixed(2));
+  }, [billFees.grandTotal, peopleCount]);
 
   // Quantity controls
   const updateQty = (id: string, delta: number) => {
@@ -226,13 +237,13 @@ function CafePage() {
       cafeName: c.name,
       cafeArea: c.area || "",
       peopleCount,
-      budgetTotal: billFees.grandTotal * peopleCount,
+      budgetTotal: billFees.grandTotal,
       transportationBudget: 0,
       items: billItems.map((i) => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
       subtotal: billFees.subtotal,
       serviceAmount: billFees.serviceAmount,
       vatAmount: billFees.vatAmount,
-      grandTotal: billFees.grandTotal * peopleCount,
+      grandTotal: billFees.grandTotal,
       mapsUrl: googleMapsNavUrl,
     });
     setSaveSuccess(true);
@@ -254,8 +265,8 @@ function CafePage() {
       `• الحساب الأساسي: ${billFees.subtotal} ج.م\n` +
       (hasServiceCharge ? `• رسوم الخدمة (12%): ${billFees.serviceAmount} ج.م\n` : "") +
       (hasVat ? `• ضريبة القيمة المضافة (14%): ${billFees.vatAmount} ج.م\n` : "") +
-      `• *الإجمالي الكلي:* ${billFees.grandTotal * peopleCount} ج.م ` +
-      (peopleCount > 1 ? `(${billFees.grandTotal} ج.م للفرد)\n` : "\n") +
+      `• *الإجمالي النهائي للفاتورة:* ${billFees.grandTotal} ج.م\n` +
+      (peopleCount > 1 ? `• *نصيب كل فرد:* ${perPersonAmount} ج.م (${peopleCount} أفراد)\n` : "") +
       `\n🗺️ *موقع الكافيه على خرائط جوجل:*\n${googleMapsNavUrl}\n\n` +
       `✨ تم التخطيط عبر منصة CaféLens`
     );
@@ -754,13 +765,15 @@ function CafePage() {
 
                     <div className="flex justify-between items-baseline pt-3 border-t border-border/50">
                       <div>
-                        <span className="text-sm font-bold text-foreground">الإجمالي النهائي</span>
+                        <span className="text-sm font-bold text-foreground">الإجمالي النهائي للفاتورة</span>
                         {peopleCount > 1 && (
-                          <p className="text-[11px] text-primary mt-0.5">({billFees.grandTotal} ج.م / للفرد)</p>
+                          <p className="text-[11px] text-primary mt-0.5">
+                            (نصيب الفرد: <strong className="font-bold">{perPersonAmount} ج.م</strong> لما نكون {peopleCount} أفراد)
+                          </p>
                         )}
                       </div>
                       <span className="text-2xl font-black text-primary font-display">
-                        {billFees.grandTotal * peopleCount} ج.م
+                        {billFees.grandTotal} ج.م
                       </span>
                     </div>
                   </div>
