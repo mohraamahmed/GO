@@ -1,14 +1,15 @@
-import { PrismaClient } from "@prisma/client";
+import type { PrismaClient as PrismaClientType } from "@prisma/client";
+import PrismaPkg from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 
 const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
+  prisma: PrismaClientType | undefined;
 };
 
-let _prismaInstance: PrismaClient | undefined;
+let _prismaInstance: PrismaClientType | undefined;
 
-function getPrismaClient(): PrismaClient {
+function getPrismaClient(): PrismaClientType {
   if (globalForPrisma.prisma) {
     return globalForPrisma.prisma;
   }
@@ -23,10 +24,15 @@ function getPrismaClient(): PrismaClient {
   const pool = new Pool({ connectionString });
   const adapter = new PrismaPg(pool);
 
-  const client = new PrismaClient({
+  const PrismaConstructor: any =
+    (PrismaPkg as any).PrismaClient ||
+    (PrismaPkg as any).default?.PrismaClient ||
+    PrismaPkg;
+
+  const client = new PrismaConstructor({
     adapter,
     log: process.env["NODE_ENV"] === "development" ? ["query", "error", "warn"] : ["error"],
-  });
+  }) as PrismaClientType;
 
   if (process.env["NODE_ENV"] !== "production") {
     globalForPrisma.prisma = client;
@@ -37,7 +43,7 @@ function getPrismaClient(): PrismaClient {
   return client;
 }
 
-export const prisma = new Proxy({} as PrismaClient, {
+export const prisma = new Proxy({} as PrismaClientType, {
   get(_target, prop) {
     const client = getPrismaClient();
     const val = (client as unknown as Record<string, unknown>)[prop as string];
