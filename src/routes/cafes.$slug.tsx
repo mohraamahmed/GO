@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { queryOptions, useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { useState, useMemo, useEffect } from "react";
 import {
   Aperture, ArrowRight, BadgeCheck, Clock, ExternalLink, Globe, MapPin, Phone, Star,
@@ -87,7 +87,8 @@ const SERVICE_ICONS: Record<string, typeof Wifi> = {
 
 function CafePage() {
   const { slug } = Route.useParams();
-  const { data: c } = useSuspenseQuery(cafeQuery(slug));
+  const loaderData = Route.useLoaderData();
+  const { data: c = loaderData } = useQuery(cafeQuery(slug));
   const { data: allCafes = [] } = useQuery(cafesQuery);
   const menuQ = useQuery({ ...menuQuery(c?.id ?? ""), enabled: !!c?.id });
 
