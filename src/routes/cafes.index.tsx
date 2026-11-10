@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState, useEffect } from "react";
 import {
   MapPin, Search, Star, Heart, GitCompareArrows, ShieldCheck,
@@ -74,7 +74,8 @@ const SERVICE_FILTERS = [
 ];
 
 function CafesPage() {
-  const { data } = useSuspenseQuery(cafesQuery);
+  const { data: allCafes = [] } = useQuery(cafesQuery);
+  const data = allCafes;
   const searchParams = Route.useSearch();
   const navigate = useNavigate();
 

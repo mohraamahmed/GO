@@ -145,7 +145,7 @@ function Index() {
   const navigate = useNavigate();
   const [heroSearch, setHeroSearch] = useState("");
   const { openFavorites, openCompare, openSubscription } = useGlobalUI();
-  const { data: allCafes = [] } = useSuspenseQuery(cafesQuery);
+  const { data: allCafes = [] } = useQuery(cafesQuery);
   const { data: authData } = useQuery({
     queryKey: ["current-user"],
     queryFn: () => getCurrentUserFn(),
@@ -623,7 +623,7 @@ function CalculatorSection({
   subscription?: any;
   onRequestSubscription?: () => void;
 }) {
-  const { data: allRaw } = useSuspenseQuery(cafesQuery);
+  const { data: allRaw = [] } = useQuery(cafesQuery);
   const all = allRaw ?? [];
   const isSubscribed = Boolean(subscription?.hasActiveSubscription || user?.role === "ADMIN");
   const [selectedArea, setSelectedArea] = useState<"all" | "sheikh_zayed" | "tagamoa">("all");
@@ -1775,7 +1775,7 @@ function CalculatorSection({
 }
 
 function Explore({ mood, area }: { mood: number | null; area: AreaFilter }) {
-  const { data: all } = useSuspenseQuery(cafesQuery);
+  const { data: all = [] } = useQuery(cafesQuery);
   const [cat, setCat] = useState<CatKey | null>(null);
   const moodKey = mood != null ? MOODS[mood]!.key : null;
   const areaClass = area === "الكل" ? null : area === "new_cairo" ? null : area;
