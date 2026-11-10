@@ -152,7 +152,11 @@ function Index() {
   const navigate = useNavigate();
   const [heroSearch, setHeroSearch] = useState("");
   const { openFavorites, openCompare, openSubscription } = useGlobalUI();
-  const { data: allCafes = [] } = useQuery(cafesQuery);
+  const loaderData = Route.useLoaderData();
+  const { data: allCafes = loaderData } = useQuery({
+    ...cafesQuery,
+    initialData: () => loaderData,
+  });
   const { data: authData } = useQuery({
     queryKey: ["current-user"],
     queryFn: () => getCurrentUserFn(),
@@ -203,21 +207,20 @@ function Index() {
           yPercent: -20, opacity: 0.3, ease: "none",
           scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: true },
         });
-      }
+        // Defer offscreen ScrollTrigger measurements to idle time to eliminate main-thread freeze
+        const setupScrollTriggers = () => {
+          gsap.utils.toArray<HTMLElement>(".reveal").forEach((el) =>
+            gsap.from(el, { y: 40, opacity: 0, duration: 0.8, ease: "power3.out", scrollTrigger: { trigger: el, start: "top bottom-=40", once: true } }),
+          );
+          gsap.from(".cat", { y: 50, opacity: 0, stagger: 0.1, duration: 0.9, ease: "power3.out", clearProps: "transform,opacity", scrollTrigger: { trigger: ".cats", start: "top bottom-=40", once: true } });
+          ScrollTrigger.refresh();
+        };
 
-      // Defer offscreen ScrollTrigger measurements to idle time to eliminate main-thread hydration freeze
-      const setupScrollTriggers = () => {
-        gsap.utils.toArray<HTMLElement>(".reveal").forEach((el) =>
-          gsap.from(el, { y: 40, opacity: 0, duration: 0.8, ease: "power3.out", scrollTrigger: { trigger: el, start: "top bottom-=40", once: true } }),
-        );
-        gsap.from(".cat", { y: 50, opacity: 0, stagger: 0.1, duration: 0.9, ease: "power3.out", clearProps: "transform,opacity", scrollTrigger: { trigger: ".cats", start: "top bottom-=40", once: true } });
-        ScrollTrigger.refresh();
-      };
-
-      if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-        (window as any).requestIdleCallback(setupScrollTriggers, { timeout: 2000 });
-      } else {
-        setTimeout(setupScrollTriggers, 150);
+        if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+          (window as any).requestIdleCallback(setupScrollTriggers, { timeout: 2000 });
+        } else {
+          setTimeout(setupScrollTriggers, 150);
+        }
       }
     }, root);
     return () => ctx.revert();
@@ -494,6 +497,7 @@ function Index() {
 
         {/* 5. CALCULATOR SECTION */}
         <CalculatorSection
+          allCafes={allCafes}
           onOpenCompare={openCompare}
           onOpenFavorites={openFavorites}
           user={user}
@@ -502,7 +506,7 @@ function Index() {
         />
 
         {/* 6. EXPLORE & TONIGHT PICK */}
-        <Explore mood={mood} area={area} />
+        <Explore mood={mood} area={area} allCafes={allCafes} />
       </main>
     </div>
   );
@@ -634,20 +638,21 @@ function CafeCard({ c, reason, priority = false }: { c: CafeListItem; reason?: s
 }
 
 function CalculatorSection({
+  allCafes = [],
   onOpenCompare,
   onOpenFavorites,
   user,
   subscription,
   onRequestSubscription,
 }: {
+  allCafes?: CafeListItem[];
   onOpenCompare?: () => void;
   onOpenFavorites?: () => void;
   user?: any;
   subscription?: any;
   onRequestSubscription?: () => void;
 }) {
-  const { data: allRaw = [] } = useQuery(cafesQuery);
-  const all = allRaw ?? [];
+  const all = allCafes;
   const isSubscribed = Boolean(subscription?.hasActiveSubscription || user?.role === "ADMIN");
   const [selectedArea, setSelectedArea] = useState<"all" | "sheikh_zayed" | "tagamoa">("all");
   const [itemType, setItemType] = useState<"combo" | "drink" | "food">("combo");
@@ -1818,8 +1823,8 @@ function CalculatorSection({
   );
 }
 
-function Explore({ mood, area }: { mood: number | null; area: AreaFilter }) {
-  const { data: all = [] } = useQuery(cafesQuery);
+function Explore({ mood, area, allCafes = [] }: { mood: number | null; area: AreaFilter; allCafes?: CafeListItem[] }) {
+  const all = allCafes;
   const [cat, setCat] = useState<CatKey | null>(null);
   const moodKey = mood != null ? MOODS[mood]!.key : null;
   const areaClass = area === "الكل" ? null : area === "new_cairo" ? null : area;
