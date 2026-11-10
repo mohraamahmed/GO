@@ -366,8 +366,8 @@ function Index() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {featuredCafes.map((c, idx) => (
-              <CafeCard key={c.id} c={c} priority={idx < 3} />
+            {featuredCafes.map((c) => (
+              <CafeCard key={c.id} c={c} priority={false} />
             ))}
           </div>
         </section>
@@ -563,7 +563,7 @@ function CafeCard({ c, reason, priority = false }: { c: CafeListItem; reason?: s
         <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5">
           {c.price_level != null && (
             <span className="rounded-full bg-background/80 backdrop-blur-md px-2 py-0.5 text-xs font-mono font-bold text-primary">
-              {"$".repeat(c.price_level)}
+              {"$".repeat(Number(c.price_level))}
             </span>
           )}
           <span className="inline-flex items-center gap-1 rounded-full bg-background/80 backdrop-blur-md px-2.5 py-0.5 text-xs font-bold text-foreground">

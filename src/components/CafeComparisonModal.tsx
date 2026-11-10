@@ -148,7 +148,7 @@ export function CafeComparisonModal({ isOpen, onClose, allCafes }: CafeCompariso
                         {/* Price Level */}
                         <div className="flex items-center justify-between py-1 border-b border-border/40">
                           <span className="text-muted-foreground">مستوى الأسعار:</span>
-                          <span className="font-semibold">{priceLabels[pLevel]}</span>
+                          <span className="font-semibold">{priceLabels[Number(pLevel)] || "متوسط ($$)"}</span>
                         </div>
 
                         {/* Source & Last Update */}

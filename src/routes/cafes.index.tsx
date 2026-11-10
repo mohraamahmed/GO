@@ -409,7 +409,7 @@ function CafesPage() {
                         <SmartImage
                           src={photo?.url}
                           alt={c.name}
-                          priority={idx < 6}
+                          priority={idx === 0}
                           className="h-full w-full object-cover group-hover:scale-105 transition duration-500"
                         />
                         <span className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
@@ -453,7 +453,7 @@ function CafesPage() {
                         <div className="absolute bottom-2.5 left-3 z-10 flex items-center gap-1.5">
                           {c.price_level != null && (
                             <span className="rounded-full bg-background/80 backdrop-blur-md px-2 py-0.5 text-xs font-mono font-bold text-primary">
-                              {"$".repeat(c.price_level)}
+                              {"$".repeat(Number(c.price_level))}
                             </span>
                           )}
                           <span className="inline-flex items-center gap-1 rounded-full bg-background/80 backdrop-blur-md px-2 py-0.5 text-xs font-bold text-foreground">

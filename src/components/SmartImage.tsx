@@ -59,7 +59,7 @@ export function SmartImage({
     );
   }
 
-  const optimizedSrc = optimizeImgUrl(src, priority ? 800 : 560);
+  const optimizedSrc = optimizeImgUrl(src, priority ? 640 : 480);
 
   return (
     <div className="relative h-full w-full overflow-hidden">

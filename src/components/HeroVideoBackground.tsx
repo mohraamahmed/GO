@@ -18,8 +18,19 @@ export function HeroVideoBackground({
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
+    const checkDesktop = () => {
+      setIsDesktop(typeof window !== "undefined" && window.innerWidth >= 768);
+    };
+    checkDesktop();
+    window.addEventListener("resize", checkDesktop, { passive: true });
+    return () => window.removeEventListener("resize", checkDesktop);
+  }, []);
+
+  useEffect(() => {
+    if (!isDesktop) return;
     const video = videoRef.current;
     if (!video) return;
 
@@ -56,7 +67,7 @@ export function HeroVideoBackground({
       if (isMounted) setIsVideoPlaying(true);
     });
 
-    // Fallback: start video on first touch/interaction on mobile
+    // Fallback: start video on first touch/interaction
     const handleUserInteraction = () => {
       if (video && video.paused) {
         video.play().then(() => {
@@ -111,7 +122,7 @@ export function HeroVideoBackground({
       removeInteractionListeners();
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, []);
+  }, [isDesktop]);
 
   return (
     <div
@@ -128,22 +139,24 @@ export function HeroVideoBackground({
         className="absolute inset-0 h-full w-full object-cover object-[center_42%]"
       />
 
-      {/* 2. Hardware-Accelerated Video Player */}
-      <video
-        ref={videoRef}
-        autoPlay
-        loop
-        muted
-        playsInline
-        preload="metadata"
-        poster={posterSrc}
-        className={`absolute inset-0 h-full w-full object-cover object-[center_42%] transition-opacity duration-700 ease-out ${
-          isVideoPlaying ? "opacity-100" : "opacity-0"
-        }`}
-      >
-        <source src={videoMp4Src} type="video/mp4" />
-        <source src={videoWebmSrc} type="video/webm" />
-      </video>
+      {/* 2. Hardware-Accelerated Video Player (Rendered on desktop viewports to eliminate 2.4MB mobile congestion) */}
+      {isDesktop && (
+        <video
+          ref={videoRef}
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="metadata"
+          poster={posterSrc}
+          className={`absolute inset-0 h-full w-full object-cover object-[center_42%] transition-opacity duration-700 ease-out ${
+            isVideoPlaying ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          <source src={videoMp4Src} type="video/mp4" />
+          <source src={videoWebmSrc} type="video/webm" />
+        </video>
+      )}
 
       {/* 3. Luxury Cinematic Vignette */}
       <div className="absolute inset-0 bg-radial-[circle_at_center,transparent_40%,rgba(0,0,0,0.35)_100%]" />

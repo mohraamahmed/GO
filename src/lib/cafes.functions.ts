@@ -34,11 +34,49 @@ function publicClient() {
   });
 }
 
-const LIST_COLS = "id,slug,name,area,area_class,address,rating,rating_count,price_level,photos,services,category,phone,website,maps_url,hours,source,verified_at";
-export type CafeListItem = Pick<
-  CafeRow,
-  "id" | "slug" | "name" | "area" | "area_class" | "address" | "rating" | "rating_count" | "price_level" | "photos" | "services" | "category" | "phone" | "website" | "maps_url" | "hours" | "source" | "verified_at"
->;
+const LIST_COLS = "id,slug,name,area,area_class,address,rating,rating_count,price_level,photos,services,category,maps_url";
+export type CafeListItem = {
+  id: string;
+  slug: string;
+  name: string;
+  area: string;
+  area_class: string;
+  address?: string | null;
+  rating?: number | null;
+  rating_count?: number | null;
+  price_level?: number | null;
+  photos: CafePhoto[];
+  services: string[];
+  category?: string | null;
+  maps_url?: string | null;
+  phone?: string | null;
+  website?: string | null;
+  hours?: any;
+  source?: string | null;
+  verified_at?: string | null;
+};
+
+export function toCompactCafe(c: any): CafeListItem {
+  let photoUrl: string | null = null;
+  if (Array.isArray(c.photos) && c.photos.length > 0) {
+    photoUrl = typeof c.photos[0] === "string" ? c.photos[0] : (c.photos[0]?.url || null);
+  }
+  return {
+    id: String(c.id),
+    slug: String(c.slug),
+    name: String(c.name),
+    area: String(c.area || ""),
+    area_class: String(c.area_class || ""),
+    address: c.address ? String(c.address) : null,
+    rating: c.rating !== undefined && c.rating !== null ? Number(c.rating) : 4.0,
+    rating_count: c.rating_count !== undefined && c.rating_count !== null ? Number(c.rating_count) : 0,
+    price_level: c.price_level !== undefined && c.price_level !== null ? Number(c.price_level) : null,
+    photos: photoUrl ? [{ url: photoUrl, by: [] }] : [],
+    services: Array.isArray(c.services) ? c.services : [],
+    category: c.category ? String(c.category) : "",
+    maps_url: c.maps_url ? String(c.maps_url) : null,
+  };
+}
 
 export const AREA_CLASS_LABELS: Record<string, string> = {
   fifth_settlement: "التجمع الخامس",
@@ -63,14 +101,14 @@ export const listCafes = createServerFn({ method: "GET" }).handler(async () => {
       .order("rating_count", { ascending: false, nullsFirst: false })
       .limit(1000);
     if (!error && data && data.length > 0) {
-      return data as CafeListItem[];
+      return data.map(toCompactCafe);
     }
   } catch {
     // fallback below
   }
-  return (LOCAL_CAFES as unknown as CafeListItem[]).sort(
-    (a, b) => Number(b.rating_count ?? 0) - Number(a.rating_count ?? 0)
-  );
+  return (LOCAL_CAFES as unknown as any[])
+    .map(toCompactCafe)
+    .sort((a, b) => Number(b.rating_count ?? 0) - Number(a.rating_count ?? 0));
 });
 
 export const getCafe = createServerFn({ method: "GET" })
@@ -107,7 +145,7 @@ export const moodCafes = createServerFn({ method: "GET" })
           const { cafe_attributes, ...cafe } = r as Record<string, unknown> & { cafe_attributes: AttrInput[] | AttrInput | null };
           const attr = Array.isArray(cafe_attributes) ? (cafe_attributes[0] ?? EMPTY_ATTRS) : (cafe_attributes ?? EMPTY_ATTRS);
           const { score, reasons } = moodScore(data.mood, attr);
-          return { ...(cafe as unknown as CafeListItem), moodScore: score, reasons };
+          return { ...toCompactCafe(cafe), moodScore: score, reasons };
         });
         out.sort((a, b) => b.moodScore - a.moodScore || Number(b.rating_count ?? 0) - Number(a.rating_count ?? 0));
         return out;
@@ -117,14 +155,14 @@ export const moodCafes = createServerFn({ method: "GET" })
     }
 
     // Fallback using local JSON
-    let filtered = LOCAL_CAFES as unknown as CafeListItem[];
+    let filtered = LOCAL_CAFES as unknown as any[];
     if (data.areaClass) {
       filtered = filtered.filter((c) => c.area_class === data.areaClass);
     }
     const out: MoodResult[] = filtered.map((cafe) => {
       const attr = attrsMap.get(cafe.id) ?? EMPTY_ATTRS;
       const { score, reasons } = moodScore(data.mood, attr);
-      return { ...cafe, moodScore: score, reasons };
+      return { ...toCompactCafe(cafe), moodScore: score, reasons };
     });
     out.sort((a, b) => b.moodScore - a.moodScore || Number(b.rating_count ?? 0) - Number(a.rating_count ?? 0));
     return out;
