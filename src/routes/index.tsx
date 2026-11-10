@@ -162,12 +162,13 @@ function Index() {
   const subscription = authData?.subscription;
 
   const featuredCafes = useMemo(() => {
+    if (!allCafes || allCafes.length === 0) return [];
+    const scoreMap = new Map<string, number>();
+    for (const c of allCafes) {
+      scoreMap.set(c.id, calculateBayesianRating(Number(c.rating ?? 4.0), Number(c.rating_count ?? 15)));
+    }
     return [...allCafes]
-      .sort((a, b) => {
-        const bA = calculateBayesianRating(Number(a.rating ?? 4.0), Number(a.rating_count ?? 15));
-        const bB = calculateBayesianRating(Number(b.rating ?? 4.0), Number(b.rating_count ?? 15));
-        return bB - bA;
-      })
+      .sort((a, b) => (scoreMap.get(b.id) ?? 0) - (scoreMap.get(a.id) ?? 0))
       .slice(0, 6);
   }, [allCafes]);
 
@@ -185,24 +186,39 @@ function Index() {
     gsap.registerPlugin(ScrollTrigger);
     const ctx = gsap.context(() => {
       const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
-      const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-      tl.fromTo(".hero-canvas", { opacity: 0 }, { opacity: 1, duration: 0.6, clearProps: "all" })
-        .fromTo(".nav-item", { y: isMobile ? 0 : -20, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.08, duration: 0.5, clearProps: "all" }, "-=0.4")
-        .fromTo(".hero-line", { y: isMobile ? 0 : 25, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.08, duration: 0.5, clearProps: "all" }, "-=0.3")
-        .fromTo(".hero-sub", { y: isMobile ? 0 : 15, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, clearProps: "all" }, "-=0.3")
-        .fromTo(".hero-rule", { scaleX: 0, transformOrigin: "right" }, { scaleX: 1, duration: 0.5, clearProps: "all" }, "-=0.2")
-        .fromTo(".hero-search-box", { y: isMobile ? 0 : 15, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, clearProps: "all" }, "-=0.2")
-        .fromTo(".mood-picker-box", { y: isMobile ? 0 : 15, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, clearProps: "all" }, "-=0.2")
-        .fromTo(".mood", { y: isMobile ? 0 : 10, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.04, duration: 0.4, clearProps: "all" }, "-=0.3");
-      gsap.to(".hero-text", {
-        yPercent: -20, opacity: 0.3, ease: "none",
-        scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: true },
-      });
-      gsap.utils.toArray<HTMLElement>(".reveal").forEach((el) =>
-        gsap.from(el, { y: 40, opacity: 0, duration: 0.8, ease: "power3.out", scrollTrigger: { trigger: el, start: "top bottom-=40", once: true } }),
-      );
-      gsap.from(".cat", { y: 50, opacity: 0, stagger: 0.1, duration: 0.9, ease: "power3.out", clearProps: "transform,opacity", scrollTrigger: { trigger: ".cats", start: "top bottom-=40", once: true } });
-      addEventListener("load", () => ScrollTrigger.refresh());
+      
+      // On desktop, execute the full luxury entrance choreographed sequence
+      if (!isMobile) {
+        const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+        tl.fromTo(".hero-canvas", { opacity: 0 }, { opacity: 1, duration: 0.6, clearProps: "all" })
+          .fromTo(".nav-item", { y: -20, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.08, duration: 0.5, clearProps: "all" }, "-=0.4")
+          .fromTo(".hero-line", { y: 25, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.08, duration: 0.5, clearProps: "all" }, "-=0.3")
+          .fromTo(".hero-sub", { y: 15, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, clearProps: "all" }, "-=0.3")
+          .fromTo(".hero-rule", { scaleX: 0, transformOrigin: "right" }, { scaleX: 1, duration: 0.5, clearProps: "all" }, "-=0.2")
+          .fromTo(".hero-search-box", { y: 15, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, clearProps: "all" }, "-=0.2")
+          .fromTo(".mood-picker-box", { y: 15, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, clearProps: "all" }, "-=0.2")
+          .fromTo(".mood", { y: 10, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.04, duration: 0.4, clearProps: "all" }, "-=0.3");
+
+        gsap.to(".hero-text", {
+          yPercent: -20, opacity: 0.3, ease: "none",
+          scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: true },
+        });
+      }
+
+      // Defer offscreen ScrollTrigger measurements to idle time to eliminate main-thread hydration freeze
+      const setupScrollTriggers = () => {
+        gsap.utils.toArray<HTMLElement>(".reveal").forEach((el) =>
+          gsap.from(el, { y: 40, opacity: 0, duration: 0.8, ease: "power3.out", scrollTrigger: { trigger: el, start: "top bottom-=40", once: true } }),
+        );
+        gsap.from(".cat", { y: 50, opacity: 0, stagger: 0.1, duration: 0.9, ease: "power3.out", clearProps: "transform,opacity", scrollTrigger: { trigger: ".cats", start: "top bottom-=40", once: true } });
+        ScrollTrigger.refresh();
+      };
+
+      if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+        (window as any).requestIdleCallback(setupScrollTriggers, { timeout: 2000 });
+      } else {
+        setTimeout(setupScrollTriggers, 150);
+      }
     }, root);
     return () => ctx.revert();
   }, []);
@@ -237,9 +253,9 @@ function Index() {
     const g = glow.current;
     if (!g) return;
     gsap.set(g, { xPercent: -50, yPercent: -50, opacity: 0 });
-    const onResize = () => place(false);
+    const onResize = () => { if (moodRef.current != null) place(false); };
     addEventListener("resize", onResize);
-    document.fonts.ready.then(() => place(false));
+    document.fonts.ready.then(() => { if (moodRef.current != null) place(false); });
     return () => removeEventListener("resize", onResize);
   }, []);
 
@@ -728,28 +744,20 @@ function CalculatorSection({
     return scoredCafes[0] ?? null;
   }, [scoredCafes, cafeId]);
 
-  // Guard: show empty state if no cafes loaded yet
-  if (!activeScoredCafe) {
-    return (
-      <div className="flex min-h-[400px] items-center justify-center rounded-3xl border border-border/40 bg-card/30 p-8 text-center" dir="rtl">
-        <div>
-          <div className="text-4xl mb-4">☕</div>
-          <h3 className="text-lg font-bold text-foreground">لا توجد كافيهات حتى الآن</h3>
-          <p className="mt-2 text-sm text-muted-foreground">
-            سيتم إضافة بيانات الكافيهات قريباً. تابعنا!
-          </p>
-        </div>
-      </div>
-    );
-  }
+  const activeCafe = activeScoredCafe?.cafe;
+  const activeVerification = useMemo(() => (activeCafe ? getCafeVerification(activeCafe) : null), [activeCafe]);
+  const isCurrentFav = activeCafe ? isFavorite(activeCafe.id) : false;
+  const isCurrentInCompare = activeCafe ? isInCompareList(activeCafe.id) : false;
 
-  const activeCafe = activeScoredCafe.cafe;
-  const activeVerification = getCafeVerification(activeCafe);
-  const isCurrentFav = isFavorite(activeCafe.id);
-  const isCurrentInCompare = isInCompareList(activeCafe.id);
-
-  const menuQ = useQuery({ ...menuQuery(activeCafe.id), enabled: !!activeCafe.id });
-  const cafeMenuData = useMemo(() => getCafeMenuData(activeCafe, menuQ.data?.items), [activeCafe, menuQ.data]);
+  // Real menu query is enabled only when modal is opened to avoid 98.9 KB initial network congestion
+  const menuQ = useQuery({
+    ...menuQuery(activeCafe?.id ?? ""),
+    enabled: Boolean(activeCafe?.id && showFullMenu),
+  });
+  const cafeMenuData = useMemo(() => {
+    if (!activeCafe) return [];
+    return getCafeMenuData(activeCafe, menuQ.data?.items);
+  }, [activeCafe, menuQ.data]);
 
   // Autocomplete search
   const filteredCafes = useMemo(() => {
@@ -766,6 +774,18 @@ function CalculatorSection({
 
   // Smart suggestion: What can you get with this money?
   const smartRecommendation = useMemo(() => {
+    if (!activeCafe || cafeMenuData.length === 0) {
+      return {
+        items: [] as MenuItem[],
+        singlePersonSubtotal: 0,
+        billFees: calculateBillWithFees(0, { hasServiceCharge, hasVat }),
+        cafeGrandTotal: 0,
+        outingTotalWithTransport: 0,
+        remainingBudget: budget,
+        isWithinBudget: true,
+      };
+    }
+
     const drinks = cafeMenuData.filter((i) => i.category === "hot" || i.category === "cold" || i.category === "specialty");
     const foods = cafeMenuData.filter((i) => i.category === "food" || i.category === "dessert");
 
@@ -779,7 +799,7 @@ function CalculatorSection({
         const remaining = budgetPerPerson - bestDrink.price;
         const second = drinks.filter((d) => d.id !== bestDrink.id && d.price <= remaining);
         if (second.length > 0) chosen.push(second[second.length - 1]!);
-      } else {
+      } else if (drinks.length > 0) {
         chosen.push(drinks[0]!);
       }
     } else if (itemType === "food") {
@@ -787,7 +807,7 @@ function CalculatorSection({
       if (affordable.length > 0) {
         const bestFood = affordable.reduce((prev, curr) => (curr.price > prev.price ? curr : prev), affordable[0]!);
         chosen.push(bestFood);
-      } else {
+      } else if (foods.length > 0) {
         chosen.push(foods[0]!);
       }
     } else {
@@ -795,15 +815,15 @@ function CalculatorSection({
       const affordableDrink = drinks.filter((d) => d.price <= halfBudget + 30);
       const pickDrink = affordableDrink.length > 0
         ? affordableDrink[Math.min(affordableDrink.length - 1, 1)]!
-        : drinks[0]!;
+        : drinks[0];
 
-      const remForFood = budgetPerPerson - pickDrink.price;
+      const remForFood = pickDrink ? budgetPerPerson - pickDrink.price : budgetPerPerson;
       const affordableFood = foods.filter((f) => f.price <= remForFood);
       const pickFood = affordableFood.length > 0
         ? affordableFood.reduce((prev, curr) => (curr.price > prev.price ? curr : prev), affordableFood[0]!)
-        : foods.filter((f) => f.price <= budgetPerPerson)[0] ?? foods[0]!;
+        : foods.filter((f) => f.price <= budgetPerPerson)[0] ?? foods[0];
 
-      chosen = [pickDrink, pickFood];
+      chosen = [pickDrink, pickFood].filter(Boolean) as MenuItem[];
     }
 
     const singlePersonSubtotal = chosen.reduce((acc, it) => acc + it.price, 0);
@@ -821,9 +841,9 @@ function CalculatorSection({
       remainingBudget,
       isWithinBudget: outingTotalWithTransport <= budget,
     };
-  }, [cafeMenuData, budget, transportationBudget, people, itemType, hasServiceCharge, hasVat, budgetPerPerson]);
+  }, [cafeMenuData, budget, transportationBudget, people, itemType, hasServiceCharge, hasVat, budgetPerPerson, activeCafe]);
 
-  const activePhoto = (activeCafe.photos as CafePhoto[] | undefined)?.[0]?.url;
+  const activePhoto = activeCafe ? (activeCafe.photos as CafePhoto[] | undefined)?.[0]?.url : undefined;
 
   // Custom menu total in full menu modal
   const customSubtotal = useMemo(() => {
@@ -841,8 +861,9 @@ function CalculatorSection({
 
   // Smart alternatives in case user wants other options
   const smartAlternatives = useMemo(() => {
+    if (!activeCafe?.id) return [];
     return findSmartAlternatives(activeCafe.id, areaCafes, budgetPerPerson, itemType, selectedFacilities, 3);
-  }, [activeCafe.id, areaCafes, budgetPerPerson, itemType, selectedFacilities]);
+  }, [activeCafe?.id, areaCafes, budgetPerPerson, itemType, selectedFacilities]);
 
   const toggleFacility = (fac: FacilityKey) => {
     setSelectedFacilities((prev) =>
@@ -851,6 +872,7 @@ function CalculatorSection({
   };
 
   const handleSaveOutingFromModal = () => {
+    if (!activeCafe) return;
     const items = Object.entries(pickedItems)
       .map(([id, qty]) => {
         const it = cafeMenuData.find((m) => m.id === id);
@@ -880,7 +902,7 @@ function CalculatorSection({
     setTimeout(() => setPlanSavedNotice(false), 3000);
   };
 
-  const whatsappMessage = encodeURIComponent(
+  const whatsappMessage = activeCafe && activeScoredCafe ? encodeURIComponent(
     `خروجة مقترحة على كافيه «${activeCafe.name}» في ${AREA_CLASS_LABELS[activeCafe.area_class] ?? activeCafe.area}\n` +
     `التقييم البيزي: ★${activeScoredCafe.bayesianRating.toFixed(2)} (${activeCafe.rating_count} تقييم حقيقي)\n` +
     `الميزانية المحددة: ${budget} ج.م لـ ${people} أشخاص\n` +
@@ -890,7 +912,22 @@ function CalculatorSection({
     `\nالإجمالي التقريبي: ${smartRecommendation.outingTotalWithTransport} ج.م (شامل الخدمة والضريبة)\n` +
     (activeCafe.maps_url ? `الموقع على خرائط جوجل: ${activeCafe.maps_url}\n` : "") +
     `ملاحظة: البيانات معتمدة من منصة CaféLens.`
-  );
+  ) : "";
+
+  // Guard: show empty state if no cafes loaded yet (rendered cleanly after all hooks have executed)
+  if (!activeScoredCafe || !activeCafe || !activeVerification) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center rounded-3xl border border-border/40 bg-card/30 p-8 text-center" dir="rtl">
+        <div>
+          <div className="text-4xl mb-4">☕</div>
+          <h3 className="text-lg font-bold text-foreground">لا توجد كافيهات حتى الآن</h3>
+          <p className="mt-2 text-sm text-muted-foreground">
+            سيتم إضافة بيانات الكافيهات قريباً. تابعنا!
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <section id="calculator" ref={calcRef} className="reveal calc-card scroll-mt-6 w-full max-w-full overflow-hidden" aria-label="حاسبة الميزانية ومخطط الخروجة">
@@ -1813,7 +1850,7 @@ function Explore({ mood, area }: { mood: number | null; area: AreaFilter }) {
           const on = cat === c.key;
           return (
             <button key={c.label} onClick={() => setCat(on ? null : c.key)} className={`cat-card cat group snap-center ${on ? "is-on" : ""}`}>
-              <img src={c.img} alt={c.label} loading="lazy" decoding="async" width={816} height={816} />
+              <SmartImage src={c.img} alt={c.label} priority={false} className="absolute inset-0 h-full w-full object-cover -z-10" />
               <span className="cat-shade" />
               <span className="cat-num font-latin">0{cats.indexOf(c) + 1}</span>
               <span className="cat-body">
