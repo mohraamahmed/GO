@@ -32,6 +32,18 @@ const FAVORITES_KEY = "cafelens_favorites";
 const SAVED_PLANS_KEY = "cafelens_saved_plans";
 const COMPARE_KEY = "cafelens_compare_list";
 
+let memoryFavorites: string[] | null = null;
+let memorySavedPlans: SavedOutingPlan[] | null = null;
+let memoryCompareList: string[] | null = null;
+
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", (e) => {
+    if (!e.key || e.key === FAVORITES_KEY) memoryFavorites = null;
+    if (!e.key || e.key === SAVED_PLANS_KEY) memorySavedPlans = null;
+    if (!e.key || e.key === COMPARE_KEY) memoryCompareList = null;
+  });
+}
+
 function safeGetItem<T>(key: string, defaultValue: T): T {
   if (typeof window === "undefined") return defaultValue;
   try {
@@ -47,6 +59,9 @@ function safeSetItem<T>(key: string, value: T): void {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(key, JSON.stringify(value));
+    if (key === FAVORITES_KEY) memoryFavorites = value as unknown as string[];
+    else if (key === SAVED_PLANS_KEY) memorySavedPlans = value as unknown as SavedOutingPlan[];
+    else if (key === COMPARE_KEY) memoryCompareList = value as unknown as string[];
     window.dispatchEvent(new CustomEvent("cafelens_storage_update", { detail: { key } }));
   } catch (e) {
     console.error(`Failed writing ${key} to localStorage:`, e);
@@ -56,7 +71,9 @@ function safeSetItem<T>(key: string, value: T): void {
 // ----------------- FAVORITES -----------------
 
 export function getFavorites(): string[] {
-  return safeGetItem<string[]>(FAVORITES_KEY, []);
+  if (memoryFavorites !== null) return memoryFavorites;
+  memoryFavorites = safeGetItem<string[]>(FAVORITES_KEY, []);
+  return memoryFavorites;
 }
 
 export function isFavorite(cafeId: string): boolean {
@@ -75,7 +92,9 @@ export function toggleFavorite(cafeId: string): boolean {
 // ----------------- SAVED OUTING PLANS -----------------
 
 export function getSavedPlans(): SavedOutingPlan[] {
-  return safeGetItem<SavedOutingPlan[]>(SAVED_PLANS_KEY, []);
+  if (memorySavedPlans !== null) return memorySavedPlans;
+  memorySavedPlans = safeGetItem<SavedOutingPlan[]>(SAVED_PLANS_KEY, []);
+  return memorySavedPlans;
 }
 
 export function saveOutingPlan(plan: Omit<SavedOutingPlan, "id" | "createdAt">): SavedOutingPlan {
@@ -99,7 +118,9 @@ export function deleteOutingPlan(planId: string): void {
 // ----------------- COMPARISON LIST (MAX 3) -----------------
 
 export function getCompareList(): string[] {
-  return safeGetItem<string[]>(COMPARE_KEY, []);
+  if (memoryCompareList !== null) return memoryCompareList;
+  memoryCompareList = safeGetItem<string[]>(COMPARE_KEY, []);
+  return memoryCompareList;
 }
 
 export function isInCompareList(cafeId: string): boolean {

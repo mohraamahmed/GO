@@ -37,9 +37,15 @@ export const Route = createFileRoute("/")({
       {
         rel: "preload",
         as: "image",
+        href: "/hero-poster-mobile.webp",
+        media: "(max-width: 767px)",
+        fetchPriority: "high",
+      },
+      {
+        rel: "preload",
+        as: "image",
         href: "/hero-poster.webp",
-        imageSrcSet: "/hero-poster-mobile.webp 540w, /hero-poster.webp 720w",
-        imageSizes: "(max-width: 767px) 540px, 720px",
+        media: "(min-width: 768px)",
         fetchPriority: "high",
       },
     ],

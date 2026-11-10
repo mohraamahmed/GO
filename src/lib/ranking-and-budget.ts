@@ -293,12 +293,12 @@ export function calculateCafeScoreWithFacilities(
   const qualityScore = Math.min(35, ratingPoints + reviewBonus);
 
   // 4. Facility Match Score (0 - 15 points)
-  const servicesText = (cafe.services || []).join(" ").toLowerCase();
-  const nameAndArea = (cafe.name + " " + (cafe.area || "")).toLowerCase();
   const missingFacilities: string[] = [];
   let facilityPoints = 0;
 
   if (selectedFacilities.length > 0) {
+    const servicesText = (cafe.services || []).join(" ").toLowerCase();
+    const nameAndArea = (cafe.name + " " + (cafe.area || "")).toLowerCase();
     let matchedCount = 0;
     selectedFacilities.forEach((fac) => {
       let matched = false;
@@ -336,11 +336,13 @@ export function calculateCafeScoreWithFacilities(
   let experienceScore = 0;
   if (itemType === "drink" && cafe.category === "coffee_roastery") {
     experienceScore += 5;
-  } else if (
-    itemType === "food" &&
-    (servicesText.includes("إفطار") || servicesText.includes("حلويات") || servicesText.includes("مأكولات"))
-  ) {
-    experienceScore += 5;
+  } else if (itemType === "food") {
+    const servicesText = (cafe.services || []).join(" ").toLowerCase();
+    if (servicesText.includes("إفطار") || servicesText.includes("حلويات") || servicesText.includes("مأكولات")) {
+      experienceScore += 5;
+    } else {
+      experienceScore += 3;
+    }
   } else {
     experienceScore += 3;
   }

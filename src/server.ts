@@ -104,6 +104,25 @@ export default {
       // 2. Attach hardened security headers
       const secureHeaders = applySecurityHeaders(normalized.headers);
 
+      // 3. Attach Edge Caching on public SSR GET pages (Homepage, Listing, Details)
+      try {
+        const url = new URL(request.url);
+        const isPublicGet =
+          request.method === "GET" &&
+          normalized.status === 200 &&
+          !url.pathname.startsWith("/api") &&
+          !url.pathname.startsWith("/admin") &&
+          !url.pathname.startsWith("/auth") &&
+          !url.pathname.startsWith("/_server") &&
+          !request.headers.get("cookie")?.includes("cafelens-token");
+
+        if (isPublicGet) {
+          secureHeaders.set("Cache-Control", "public, max-age=0, s-maxage=300, stale-while-revalidate=86400");
+        }
+      } catch {
+        // Safe fallback if URL parsing fails
+      }
+
       return new Response(normalized.body, {
         status: normalized.status,
         statusText: normalized.statusText,
