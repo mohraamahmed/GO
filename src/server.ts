@@ -88,7 +88,12 @@ export default {
       }
 
       const handler = await getServerEntry();
-      const response = await handler.fetch(request, env, ctx);
+      // Provide robust fallback for execution contexts missing waitUntil (e.g. edge runtimes or testing)
+      const safeCtx =
+        ctx && typeof ctx === "object" && typeof (ctx as Record<string, unknown>)["waitUntil"] === "function"
+          ? ctx
+          : { waitUntil: () => {}, ...(typeof ctx === "object" ? ctx : {}) };
+      const response = await handler.fetch(request, env, safeCtx);
       const normalized = await normalizeCatastrophicSsrResponse(response);
 
       // 2. Attach hardened security headers
