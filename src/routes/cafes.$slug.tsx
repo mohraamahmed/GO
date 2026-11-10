@@ -21,7 +21,7 @@ import { getCurrentUserFn } from "@/lib/api-auth.functions";
 import { useGlobalUI } from "@/context/GlobalUIContext";
 import { Button } from "@/components/ui/button";
 import { Crown, Lock } from "lucide-react";
-import { SmartImage, ThumbImage } from "@/components/SmartImage";
+import { SmartImage, ThumbImage, optimizeImgUrl } from "@/components/SmartImage";
 
 const cafeQuery = (slug: string) =>
   queryOptions({ queryKey: ["cafe", slug], queryFn: () => getCafe({ data: { slug } }), staleTime: 5 * 60_000 });
@@ -37,6 +37,10 @@ export const Route = createFileRoute("/cafes/$slug")({
     const title = loaderData ? `${loaderData.name} — ${loaderData.area} | CaféLens` : "كافيه | CaféLens";
     const desc = loaderData ? `${loaderData.name} في ${loaderData.area}: المنيو الكامل، الأسعار الرسمية، التقييم، وحاسبة الفاتورة الذكية.` : "تفاصيل الكافيه";
     return {
+      links: [
+        { rel: "preconnect", href: "https://lh3.googleusercontent.com" },
+        ...(photo ? [{ rel: "preload", as: "image", href: optimizeImgUrl(photo, 640), fetchPriority: "high" as const }] : []),
+      ],
       meta: [
         { title },
         { name: "description", content: desc },

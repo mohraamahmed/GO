@@ -43,6 +43,15 @@ export const Route = createFileRoute("/cafes/")({
     return { q, area, sort, service, price };
   },
   head: () => ({
+    links: [
+      { rel: "preconnect", href: "https://lh3.googleusercontent.com" },
+      {
+        rel: "preload",
+        as: "image",
+        href: "https://lh3.googleusercontent.com/grass-cs/AABkmLeUdP3oNXkf-uFBV1V1aiQ6cKF_9WKZ9NBic8R7DlIFUdpHgBi9pQevOde93ky2fBR4DIj2wOfPz4OAoXPBS3_vvuvzC54GTIDTceEzoE9ftt3G4ob-CEpjSKGZBIG6c-p0qIMgWtniE8pV=w640-h416-k-no-rw",
+        fetchPriority: "high",
+      },
+    ],
     meta: [
       { title: "دليل الكافيهات الموثقة — القاهرة الجديدة والشيخ زايد | CaféLens" },
       { name: "description", content: "دليل حقيقي موثق لكافيهات القاهرة الجديدة والتجمع الخامس والشيخ زايد بالعناوين والمواعيد والصور والتقييمات الموثقة والمنيو." },
@@ -57,6 +66,7 @@ export const Route = createFileRoute("/cafes/")({
 });
 
 const PAGE_SIZE = 24;
+const INITIAL_RENDER_COUNT = 8;
 
 const AREA_FILTERS = [
   { value: "all", label: "كل المناطق" },
@@ -86,8 +96,17 @@ function CafesPage() {
   const priceFilter = searchParams.price ? Number(searchParams.price) : null;
 
   const [shown, setShown] = useState(PAGE_SIZE);
+  const [renderLimit, setRenderLimit] = useState(INITIAL_RENDER_COUNT);
   const [searchInput, setSearchInput] = useState(q);
   const [storageCounter, setStorageCounter] = useState(0);
+
+  // Expand to full shown slice after first paint to keep initial DOM size minimal for LCP
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setRenderLimit(shown);
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [shown]);
 
   // Sync internal input when URL query changes
   useEffect(() => {
@@ -204,7 +223,10 @@ function CafesPage() {
     return l;
   }, [data, q, areaFilter, serviceFilter, priceFilter, sort]);
 
-  const visibleList = useMemo(() => filteredList.slice(0, shown), [filteredList, shown]);
+  const visibleList = useMemo(
+    () => filteredList.slice(0, Math.min(shown, renderLimit)),
+    [filteredList, shown, renderLimit]
+  );
 
   return (
     <div className="min-h-screen bg-background text-foreground" dir="rtl">

@@ -131,13 +131,16 @@ export function HeroVideoBackground({
       aria-hidden="true"
     >
       {/* 1. Permanent Static Poster Image (ALWAYS visible underneath — prevents ANY black screen flash) */}
-      <img
-        src={posterSrc}
-        alt={alt}
-        fetchPriority="high"
-        decoding="async"
-        className="absolute inset-0 h-full w-full object-cover object-[center_42%]"
-      />
+      <picture className="absolute inset-0 h-full w-full">
+        <source media="(max-width: 767px)" srcSet="/hero-poster-mobile.webp" type="image/webp" />
+        <img
+          src={posterSrc}
+          alt={alt}
+          fetchPriority="high"
+          decoding="sync"
+          className="h-full w-full object-cover object-[center_42%]"
+        />
+      </picture>
 
       {/* 2. Hardware-Accelerated Video Player (Rendered on desktop viewports to eliminate 2.4MB mobile congestion) */}
       {isDesktop && (

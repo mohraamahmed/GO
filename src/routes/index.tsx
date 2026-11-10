@@ -34,7 +34,14 @@ import work from "@/assets/work.webp";
 export const Route = createFileRoute("/")({
   head: () => ({
     links: [
-      { rel: "preload", as: "image", href: "/hero-poster.webp", fetchPriority: "high" },
+      {
+        rel: "preload",
+        as: "image",
+        href: "/hero-poster.webp",
+        imageSrcSet: "/hero-poster-mobile.webp 540w, /hero-poster.webp 720w",
+        imageSizes: "(max-width: 767px) 540px, 720px",
+        fetchPriority: "high",
+      },
     ],
     meta: [
       { title: "CaféLens — اكتشف كافيهك المثالي في القاهرة" },

@@ -6,7 +6,7 @@
  * - Fade in smooth بعد التحميل
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { Aperture } from "lucide-react";
 
 type SmartImageProps = {
@@ -47,9 +47,35 @@ export function SmartImage({
 }: SmartImageProps) {
   const [loaded, setLoaded] = useState(false);
   const [errored, setErrored] = useState(false);
+  const [isInView, setIsInView] = useState(priority);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const handleLoad = useCallback(() => setLoaded(true), []);
   const handleError = useCallback(() => setErrored(true), []);
+
+  useEffect(() => {
+    if (priority || isInView) return;
+    const el = containerRef.current;
+    if (!el) return;
+
+    if (typeof IntersectionObserver === "undefined") {
+      setIsInView(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setIsInView(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "250px" }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [priority, isInView]);
 
   if (!src || errored) {
     return (
@@ -62,7 +88,7 @@ export function SmartImage({
   const optimizedSrc = optimizeImgUrl(src, priority ? 640 : 480);
 
   return (
-    <div className="relative h-full w-full overflow-hidden">
+    <div ref={containerRef} className="relative h-full w-full overflow-hidden">
       {/* Shimmer placeholder shown until image loads */}
       {!loaded && (
         <div
@@ -75,18 +101,20 @@ export function SmartImage({
         />
       )}
 
-      {/* Main image */}
-      <img
-        src={optimizedSrc}
-        alt={alt}
-        loading={priority ? "eager" : "lazy"}
-        decoding={priority ? "sync" : "async"}
-        fetchPriority={priority ? "high" : "auto"}
-        referrerPolicy={referrerPolicy}
-        onLoad={handleLoad}
-        onError={handleError}
-        className={`${className} transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
-      />
+      {/* Main image — only rendered when in view to prevent Chromium native lazy-load bandwidth contention */}
+      {isInView && (
+        <img
+          src={optimizedSrc}
+          alt={alt}
+          loading={priority ? "eager" : "lazy"}
+          decoding={priority ? "sync" : "async"}
+          fetchPriority={priority ? "high" : "low"}
+          referrerPolicy={referrerPolicy}
+          onLoad={handleLoad}
+          onError={handleError}
+          className={`${className} transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
+        />
+      )}
     </div>
   );
 }
