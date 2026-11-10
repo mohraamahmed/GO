@@ -1301,7 +1301,7 @@ function CalculatorSection({
               <SmartImage
                 src={activePhoto}
                 alt={activeCafe.name}
-                priority={true}
+                priority={false}
                 className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent pointer-events-none" />
@@ -1863,11 +1863,11 @@ function Explore({ mood, area }: { mood: number | null; area: AreaFilter }) {
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {list.slice(0, 12).map((c, idx) => (
+          {list.slice(0, 12).map((c) => (
             <CafeCard
               key={c.id}
               c={c}
-              priority={idx < 4}
+              priority={false}
               reason={"reasons" in c && c.reasons.length > 0 ? c.reasons.join("، و") : undefined}
             />
           ))}

@@ -45,12 +45,6 @@ export const Route = createFileRoute("/cafes/")({
   head: () => ({
     links: [
       { rel: "preconnect", href: "https://lh3.googleusercontent.com" },
-      {
-        rel: "preload",
-        as: "image",
-        href: "https://lh3.googleusercontent.com/grass-cs/AABkmLeUdP3oNXkf-uFBV1V1aiQ6cKF_9WKZ9NBic8R7DlIFUdpHgBi9pQevOde93ky2fBR4DIj2wOfPz4OAoXPBS3_vvuvzC54GTIDTceEzoE9ftt3G4ob-CEpjSKGZBIG6c-p0qIMgWtniE8pV=w640-h416-k-no-rw",
-        fetchPriority: "high",
-      },
     ],
     meta: [
       { title: "دليل الكافيهات الموثقة — القاهرة الجديدة والشيخ زايد | CaféLens" },
@@ -100,13 +94,50 @@ function CafesPage() {
   const [searchInput, setSearchInput] = useState(q);
   const [storageCounter, setStorageCounter] = useState(0);
 
-  // Expand to full shown slice after first paint to keep initial DOM size minimal for LCP
+  // Pre-calculate bayesian scores once per dataset to eliminate O(N log N) recomputations during sorting
+  const bayesianScores = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const c of data) {
+      map.set(c.id, calculateBayesianRating(Number(c.rating ?? 4.0), Number(c.rating_count ?? 15)));
+    }
+    return map;
+  }, [data]);
+
+  // Expand to full shown slice only during idle time (after LCP/FCP paint window) or on user scroll
   useEffect(() => {
-    const timer = setTimeout(() => {
+    if (renderLimit >= shown) return undefined;
+
+    let timeoutId: any;
+    let idleId: any;
+
+    const expand = () => {
       setRenderLimit(shown);
-    }, 50);
-    return () => clearTimeout(timer);
-  }, [shown]);
+    };
+
+    if (typeof window !== "undefined") {
+      const win = window as any;
+      if ("requestIdleCallback" in win) {
+        idleId = win.requestIdleCallback(expand, { timeout: 2500 });
+      } else {
+        timeoutId = setTimeout(expand, 2500);
+      }
+
+      const onScroll = () => {
+        expand();
+        window.removeEventListener("scroll", onScroll);
+      };
+      window.addEventListener("scroll", onScroll, { passive: true, once: true });
+
+      return () => {
+        if ("cancelIdleCallback" in win && idleId) {
+          win.cancelIdleCallback(idleId);
+        }
+        clearTimeout(timeoutId);
+        window.removeEventListener("scroll", onScroll);
+      };
+    }
+    return undefined;
+  }, [shown, renderLimit]);
 
   // Sync internal input when URL query changes
   useEffect(() => {
@@ -133,6 +164,7 @@ function CafesPage() {
       },
     });
     setShown(PAGE_SIZE);
+    setRenderLimit(INITIAL_RENDER_COUNT);
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -148,6 +180,7 @@ function CafesPage() {
     setSearchInput("");
     navigate({ to: "/cafes", search: {} as any });
     setShown(PAGE_SIZE);
+    setRenderLimit(INITIAL_RENDER_COUNT);
   };
 
   // Filter and sort the list
@@ -203,13 +236,9 @@ function CafesPage() {
       return true;
     });
 
-    // Sorting
+    // Sorting (using precomputed bayesian scores Map for instant O(1) lookups)
     if (sort === "bayesian") {
-      l = [...l].sort((a, b) => {
-        const bA = calculateBayesianRating(Number(a.rating ?? 4.0), Number(a.rating_count ?? 15));
-        const bB = calculateBayesianRating(Number(b.rating ?? 4.0), Number(b.rating_count ?? 15));
-        return bB - bA;
-      });
+      l = [...l].sort((a, b) => (bayesianScores.get(b.id) ?? 0) - (bayesianScores.get(a.id) ?? 0));
     } else if (sort === "rating") {
       l = [...l].sort((a, b) => Number(b.rating ?? 0) - Number(a.rating ?? 0));
     } else if (sort === "price_asc") {
@@ -221,7 +250,7 @@ function CafesPage() {
     }
 
     return l;
-  }, [data, q, areaFilter, serviceFilter, priceFilter, sort]);
+  }, [data, q, areaFilter, serviceFilter, priceFilter, sort, bayesianScores]);
 
   const visibleList = useMemo(
     () => filteredList.slice(0, Math.min(shown, renderLimit)),
@@ -399,7 +428,7 @@ function CafesPage() {
                 const inCompare = isInCompareList(c.id);
                 const ratingNum = Number(c.rating ?? 4.0);
                 const reviewsNum = Number(c.rating_count ?? 10);
-                const bayesian = calculateBayesianRating(ratingNum, reviewsNum);
+                const bayesian = bayesianScores.get(c.id) ?? calculateBayesianRating(ratingNum, reviewsNum);
 
                 const handleToggleFav = (e: React.MouseEvent) => {
                   e.preventDefault();

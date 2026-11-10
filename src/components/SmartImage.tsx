@@ -89,8 +89,8 @@ export function SmartImage({
 
   return (
     <div ref={containerRef} className="relative h-full w-full overflow-hidden">
-      {/* Shimmer placeholder shown until image loads */}
-      {!loaded && (
+      {/* Shimmer placeholder shown until image loads (disabled for priority to never block LCP paint) */}
+      {!loaded && !priority && (
         <div
           className="absolute inset-0 bg-gradient-to-br from-amber-950/50 via-stone-800/70 to-amber-900/30"
           style={{
@@ -112,7 +112,16 @@ export function SmartImage({
           referrerPolicy={referrerPolicy}
           onLoad={handleLoad}
           onError={handleError}
-          className={`${className} transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
+          ref={(node) => {
+            if (node?.complete && !loaded) {
+              setLoaded(true);
+            }
+          }}
+          className={`${className} ${
+            priority
+              ? "opacity-100"
+              : `transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`
+          }`}
         />
       )}
     </div>
