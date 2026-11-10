@@ -1,7 +1,4 @@
 import type { PrismaClient as PrismaClientType } from "@prisma/client";
-import PrismaPkg from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { Pool } from "pg";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClientType | undefined;
@@ -17,30 +14,49 @@ function getPrismaClient(): PrismaClientType {
     return _prismaInstance;
   }
 
-  const connectionString =
-    process.env["DATABASE_URL"] ||
-    "postgresql://postgres:postgres@localhost:5432/cafelens?schema=public";
+  try {
+    const { createRequire } = require("node:module");
+    const localRequire = typeof createRequire === "function" ? createRequire(import.meta.url) : require;
 
-  const pool = new Pool({ connectionString });
-  const adapter = new PrismaPg(pool);
+    const { Pool } = localRequire("pg");
+    const { PrismaPg } = localRequire("@prisma/adapter-pg");
+    const PrismaPkg = localRequire("@prisma/client");
 
-  const PrismaConstructor: any =
-    (PrismaPkg as any).PrismaClient ||
-    (PrismaPkg as any).default?.PrismaClient ||
-    PrismaPkg;
+    const connectionString =
+      process.env["DATABASE_URL"] ||
+      "postgresql://postgres:postgres@localhost:5432/cafelens?schema=public";
 
-  const client = new PrismaConstructor({
-    adapter,
-    log: process.env["NODE_ENV"] === "development" ? ["query", "error", "warn"] : ["error"],
-  }) as PrismaClientType;
+    const pool = new Pool({ connectionString });
+    const adapter = new PrismaPg(pool);
 
-  if (process.env["NODE_ENV"] !== "production") {
-    globalForPrisma.prisma = client;
-  } else {
-    _prismaInstance = client;
+    const PrismaConstructor: any =
+      PrismaPkg.PrismaClient ||
+      PrismaPkg.default?.PrismaClient ||
+      PrismaPkg;
+
+    const client = new PrismaConstructor({
+      adapter,
+      log: process.env["NODE_ENV"] === "development" ? ["query", "error", "warn"] : ["error"],
+    }) as PrismaClientType;
+
+    if (process.env["NODE_ENV"] !== "production") {
+      globalForPrisma.prisma = client;
+    } else {
+      _prismaInstance = client;
+    }
+
+    return client;
+  } catch (err) {
+    console.warn("[Prisma Lazy Init Fallback] Prisma client unavailable:", err);
+    return new Proxy({} as PrismaClientType, {
+      get(_t, prop) {
+        if (typeof prop === "string" && ["then", "catch", "finally"].includes(prop)) return undefined;
+        return () => {
+          throw new Error(`Prisma Client is not configured or generated: ${(err as Error)?.message || err}`);
+        };
+      },
+    });
   }
-
-  return client;
 }
 
 export const prisma = new Proxy({} as PrismaClientType, {
