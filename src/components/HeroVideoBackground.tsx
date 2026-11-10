@@ -135,7 +135,7 @@ export function HeroVideoBackground({
         loop
         muted
         playsInline
-        preload="auto"
+        preload="metadata"
         poster={posterSrc}
         className={`absolute inset-0 h-full w-full object-cover object-[center_42%] transition-opacity duration-700 ease-out ${
           isVideoPlaying ? "opacity-100" : "opacity-0"

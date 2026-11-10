@@ -35,7 +35,6 @@ export const Route = createFileRoute("/")({
   head: () => ({
     links: [
       { rel: "preload", as: "image", href: "/hero-poster.webp", fetchPriority: "high" },
-      { rel: "preload", as: "video", href: "/hero-video.mp4", type: "video/mp4" },
     ],
     meta: [
       { title: "CaféLens — اكتشف كافيهك المثالي في القاهرة" },
@@ -178,15 +177,16 @@ function Index() {
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger);
     const ctx = gsap.context(() => {
+      const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
       const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
       tl.fromTo(".hero-canvas", { opacity: 0 }, { opacity: 1, duration: 0.6, clearProps: "all" })
-        .fromTo(".nav-item", { y: -20, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.08, duration: 0.5, clearProps: "all" }, "-=0.4")
-        .fromTo(".hero-line", { y: 35, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.1, duration: 0.6, clearProps: "all" }, "-=0.3")
-        .fromTo(".hero-sub", { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, clearProps: "all" }, "-=0.3")
+        .fromTo(".nav-item", { y: isMobile ? 0 : -20, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.08, duration: 0.5, clearProps: "all" }, "-=0.4")
+        .fromTo(".hero-line", { y: isMobile ? 0 : 25, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.08, duration: 0.5, clearProps: "all" }, "-=0.3")
+        .fromTo(".hero-sub", { y: isMobile ? 0 : 15, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, clearProps: "all" }, "-=0.3")
         .fromTo(".hero-rule", { scaleX: 0, transformOrigin: "right" }, { scaleX: 1, duration: 0.5, clearProps: "all" }, "-=0.2")
-        .fromTo(".hero-search-box", { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, clearProps: "all" }, "-=0.2")
-        .fromTo(".mood-picker-box", { y: 25, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, clearProps: "all" }, "-=0.2")
-        .fromTo(".mood", { y: 15, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.06, duration: 0.5, clearProps: "all" }, "-=0.3");
+        .fromTo(".hero-search-box", { y: isMobile ? 0 : 15, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, clearProps: "all" }, "-=0.2")
+        .fromTo(".mood-picker-box", { y: isMobile ? 0 : 15, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, clearProps: "all" }, "-=0.2")
+        .fromTo(".mood", { y: isMobile ? 0 : 10, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.04, duration: 0.4, clearProps: "all" }, "-=0.3");
       gsap.to(".hero-text", {
         yPercent: -20, opacity: 0.3, ease: "none",
         scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: true },
