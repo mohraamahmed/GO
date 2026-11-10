@@ -1,4 +1,7 @@
 import type { PrismaClient as PrismaClientType } from "@prisma/client";
+import { createRequire } from "node:module";
+
+const localRequire = createRequire(import.meta.url);
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClientType | undefined;
@@ -15,9 +18,6 @@ function getPrismaClient(): PrismaClientType {
   }
 
   try {
-    const { createRequire } = require("node:module");
-    const localRequire = typeof createRequire === "function" ? createRequire(import.meta.url) : require;
-
     const { Pool } = localRequire("pg");
     const { PrismaPg } = localRequire("@prisma/adapter-pg");
     const PrismaPkg = localRequire("@prisma/client");
