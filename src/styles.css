@@ -656,3 +656,8 @@
     background-position: -200% 0;
   }
 }
+
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 600px;
+}

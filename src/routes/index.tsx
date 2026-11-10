@@ -941,7 +941,7 @@ function CalculatorSection({
   }
 
   return (
-    <section id="calculator" ref={calcRef} className="reveal calc-card scroll-mt-6 w-full max-w-full overflow-hidden" aria-label="حاسبة الميزانية ومخطط الخروجة">
+    <section id="calculator" ref={calcRef} className="reveal calc-card cv-auto scroll-mt-6 w-full max-w-full overflow-hidden" aria-label="حاسبة الميزانية ومخطط الخروجة">
       {/* Header */}
       <div className="mb-4 sm:mb-6 flex items-center justify-between gap-3 border-b border-border/60 pb-3 sm:pb-4">
         <div className="flex items-center gap-3">
@@ -1877,7 +1877,7 @@ function Explore({ mood, area, allCafes = [] }: { mood: number | null; area: Are
     </section>
 
     {/* RESULTS */}
-    <section aria-label="ترشيحات" className="space-y-5">
+    <section aria-label="ترشيحات" className="space-y-5 cv-auto">
       <div className="reveal flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-sm text-primary">{moodKey ? "ترشيحات على مزاجك" : "الأكثر شهرة"}</p>
@@ -1929,7 +1929,7 @@ function Explore({ mood, area, allCafes = [] }: { mood: number | null; area: Are
     </section>
 
     {/* TONIGHT */}
-    <section id="tonight" className="reveal tonight-card scroll-mt-6" aria-label="اختر لي خروجة الليلة">
+    <section id="tonight" className="reveal tonight-card cv-auto scroll-mt-6" aria-label="اختر لي خروجة الليلة">
       <div className="space-y-2">
         <p className="text-sm text-primary">محتار؟</p>
         <h2 className="font-display text-2xl md:text-3xl">اختار لي خروجة الليلة</h2>

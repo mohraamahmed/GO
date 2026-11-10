@@ -93,7 +93,14 @@ for (const a of LOCAL_ATTRS as any[]) {
   if (a.cafe_id) attrsMap.set(a.cafe_id, a);
 }
 
+let serverCafesCache: CafeListItem[] | null = null;
+let serverCafesCacheTime = 0;
+const SERVER_CACHE_TTL = 120_000; // 2 minutes in-memory cache
+
 export const listCafes = createServerFn({ method: "GET" }).handler(async () => {
+  if (serverCafesCache && Date.now() - serverCafesCacheTime < SERVER_CACHE_TTL) {
+    return serverCafesCache;
+  }
   try {
     const { data, error } = await publicClient()
       .from("cafes")
@@ -101,22 +108,37 @@ export const listCafes = createServerFn({ method: "GET" }).handler(async () => {
       .order("rating_count", { ascending: false, nullsFirst: false })
       .limit(1000);
     if (!error && data && data.length > 0) {
-      return data.map(toCompactCafe);
+      serverCafesCache = data.map(toCompactCafe);
+      serverCafesCacheTime = Date.now();
+      return serverCafesCache;
     }
   } catch {
     // fallback below
   }
-  return (LOCAL_CAFES as unknown as any[])
+  const fallback = (LOCAL_CAFES as unknown as any[])
     .map(toCompactCafe)
     .sort((a, b) => Number(b.rating_count ?? 0) - Number(a.rating_count ?? 0));
+  serverCafesCache = fallback;
+  serverCafesCacheTime = Date.now();
+  return fallback;
 });
+
+const serverCafeDetailCache = new Map<string, { data: CafeRow; time: number }>();
 
 export const getCafe = createServerFn({ method: "GET" })
   .validator((d: { slug: string }) => ({ slug: String(d.slug).slice(0, 120) }))
   .handler(async ({ data }) => {
+    const cached = serverCafeDetailCache.get(data.slug);
+    if (cached && Date.now() - cached.time < SERVER_CACHE_TTL) {
+      return cached.data;
+    }
     try {
       const { data: row, error } = await publicClient().from("cafes").select("*").eq("slug", data.slug).maybeSingle();
-      if (!error && row) return row as CafeRow;
+      if (!error && row) {
+        const item = row as CafeRow;
+        serverCafeDetailCache.set(data.slug, { data: item, time: Date.now() });
+        return item;
+      }
     } catch {
       // fallback below
     }

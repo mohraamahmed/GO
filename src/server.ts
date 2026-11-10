@@ -97,7 +97,7 @@ export default {
       const safeCtx =
         ctx && typeof ctx === "object" && typeof (ctx as Record<string, unknown>)["waitUntil"] === "function"
           ? ctx
-          : { waitUntil: () => {}, ...(typeof ctx === "object" ? ctx : {}) };
+          : { waitUntil: () => { }, ...(typeof ctx === "object" ? ctx : {}) };
       const response = await handler.fetch(request, env, safeCtx);
       const normalized = await normalizeCatastrophicSsrResponse(response);
 
