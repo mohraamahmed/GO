@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "cross-env NODE_ENV=production NODE_OPTIONS=--max-old-space-size=4096 vite build",
+    "build": "node ./scripts/build.cjs",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
