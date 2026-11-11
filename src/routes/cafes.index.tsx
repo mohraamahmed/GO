@@ -5,8 +5,8 @@ import {
   MapPin, Search, Star, Heart, GitCompareArrows, ShieldCheck,
   Filter, RotateCcw, ChevronLeft, Sparkles, Coffee, Laptop, Wind, Wifi, Car,
 } from "lucide-react";
-import { AREA_CLASS_LABELS, type CafePhoto, type CafeListItem } from "@/lib/cafes.functions";
-import { cafesQuery } from "@/lib/queries";
+import { AREA_CLASS_LABELS, type CafePhoto, type CafeListItem, type ListingInitialData } from "@/lib/cafes.functions";
+import { cafesQuery, listingInitialQuery } from "@/lib/queries";
 import { getCafeVerification, calculateBayesianRating } from "@/lib/ranking-and-budget";
 import { isFavorite, toggleFavorite, isInCompareList, toggleCompareCafe } from "@/lib/user-storage";
 import { SmartImage } from "@/components/SmartImage";
@@ -69,7 +69,7 @@ export const Route = createFileRoute("/cafes/")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  loader: ({ context }) => context.queryClient.ensureQueryData(cafesQuery),
+  loader: ({ context }) => context.queryClient.ensureQueryData(listingInitialQuery),
   component: CafesPage,
 });
 
@@ -93,11 +93,43 @@ const SERVICE_FILTERS = [
 
 function CafesPage() {
   const loaderData = Route.useLoaderData();
-  const { data: allCafes = loaderData } = useQuery({
-    ...cafesQuery,
+  const { data: initialData = loaderData } = useQuery({
+    ...listingInitialQuery,
     initialData: () => loaderData,
   });
-  const data = allCafes;
+  const [loadFullCafes, setLoadFullCafes] = useState(false);
+  const { data: fullCafes } = useQuery({
+    ...cafesQuery,
+    enabled: loadFullCafes,
+  });
+  const data = fullCafes && fullCafes.length > 0 ? fullCafes : initialData.initialCafes;
+
+  // Trigger full cafes query in idle time or on user interaction
+  useEffect(() => {
+    if (typeof window === "undefined" || loadFullCafes) return undefined;
+    const win = window as any;
+    let idleId: any;
+    let timeoutId: any;
+
+    const trigger = () => {
+      setLoadFullCafes(true);
+      window.removeEventListener("scroll", trigger);
+    };
+
+    if ("requestIdleCallback" in win) {
+      idleId = win.requestIdleCallback(trigger, { timeout: 2000 });
+    } else {
+      timeoutId = setTimeout(trigger, 800);
+    }
+    window.addEventListener("scroll", trigger, { passive: true, once: true });
+
+    return () => {
+      if ("cancelIdleCallback" in win && idleId) win.cancelIdleCallback(idleId);
+      if (timeoutId) clearTimeout(timeoutId);
+      window.removeEventListener("scroll", trigger);
+    };
+  }, [loadFullCafes]);
+
   const searchParams = Route.useSearch();
   const navigate = useNavigate();
 
@@ -170,6 +202,7 @@ function CafesPage() {
   }, []);
 
   const updateFilters = (updates: Record<string, string | undefined>) => {
+    setLoadFullCafes(true);
     navigate({
       to: "/cafes",
       search: (prev: any) => {
@@ -187,6 +220,7 @@ function CafesPage() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setLoadFullCafes(true);
     updateFilters({ q: searchInput.trim() || undefined });
   };
 
@@ -312,6 +346,7 @@ function CafesPage() {
                 type="search"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
+                onFocus={() => setLoadFullCafes(true)}
                 placeholder="ابحث بالاسم، المكان، أو المنطقة (مثل Waterway، Arkan، التسعين)..."
                 className="w-full rounded-2xl border border-border/80 bg-card/70 py-3 pr-11 pl-20 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition"
               />

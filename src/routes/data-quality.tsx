@@ -61,12 +61,12 @@ function DataQualityPage() {
         <section className="mt-8 glass rounded-2xl p-5">
           <h2 className="font-display text-xl">التوزيع حسب تصنيف المنطقة</h2>
           <ul className="mt-4 space-y-2">
-            {Object.entries(q.byClass).sort((a, b) => b[1] - a[1]).map(([cls, n]) => (
+            {Object.entries(q.byClass).sort((a, b) => Number(b[1]) - Number(a[1])).map(([cls, n]) => (
               <li key={cls} className="flex items-center justify-between gap-3 text-sm">
                 <span>{AREA_CLASS_LABELS[cls] ?? cls}</span>
                 <span className="flex flex-1 items-center gap-3">
-                  <span className="h-1.5 rounded-full bg-primary" style={{ width: `${Math.max(2, (n / q.total) * 100)}%` }} />
-                  <span className="text-muted-foreground">{n}</span>
+                  <span className="h-1.5 rounded-full bg-primary" style={{ width: `${Math.max(2, (Number(n) / q.total) * 100)}%` }} />
+                  <span className="text-muted-foreground">{Number(n)}</span>
                 </span>
               </li>
             ))}
