@@ -85,12 +85,43 @@ export function SmartImage({
     );
   }
 
-  const optimizedSrc = optimizeImgUrl(src, priority ? 640 : 480);
+  // For high-priority LCP images, provide responsive variants: 400px on mobile (<640px) and 640px on desktop
+  if (priority) {
+    const srcMobile = optimizeImgUrl(src, 400);
+    const srcDesktop = optimizeImgUrl(src, 640);
+
+    return (
+      <div ref={containerRef} className="relative h-full w-full overflow-hidden">
+        <picture className="h-full w-full">
+          <source media="(max-width: 640px)" srcSet={srcMobile} />
+          <source media="(min-width: 641px)" srcSet={srcDesktop} />
+          <img
+            src={srcDesktop}
+            alt={alt}
+            loading="eager"
+            decoding="sync"
+            fetchPriority="high"
+            referrerPolicy={referrerPolicy}
+            onLoad={handleLoad}
+            onError={handleError}
+            ref={(node) => {
+              if (node?.complete && !loaded) {
+                setLoaded(true);
+              }
+            }}
+            className={`${className} opacity-100`}
+          />
+        </picture>
+      </div>
+    );
+  }
+
+  const optimizedSrc = optimizeImgUrl(src, 480);
 
   return (
     <div ref={containerRef} className="relative h-full w-full overflow-hidden">
       {/* Shimmer placeholder shown until image loads (disabled for priority to never block LCP paint) */}
-      {!loaded && !priority && (
+      {!loaded && (
         <div
           className="absolute inset-0 bg-gradient-to-br from-amber-950/50 via-stone-800/70 to-amber-900/30"
           style={{
@@ -106,9 +137,9 @@ export function SmartImage({
         <img
           src={optimizedSrc}
           alt={alt}
-          loading={priority ? "eager" : "lazy"}
-          decoding={priority ? "sync" : "async"}
-          fetchPriority={priority ? "high" : "low"}
+          loading="lazy"
+          decoding="async"
+          fetchPriority="low"
           referrerPolicy={referrerPolicy}
           onLoad={handleLoad}
           onError={handleError}
@@ -117,11 +148,7 @@ export function SmartImage({
               setLoaded(true);
             }
           }}
-          className={`${className} ${
-            priority
-              ? "opacity-100"
-              : `transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`
-          }`}
+          className={`${className} transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
         />
       )}
     </div>

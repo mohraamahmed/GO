@@ -133,6 +133,16 @@ export const listCafes = createServerFn({ method: "GET" }).handler(async () => {
 
 const serverCafeDetailCache = new Map<string, { data: CafeRow; time: number }>();
 
+/** Invalidate server-side in-memory cache on demand (e.g. after admin updates) */
+export function invalidateServerCafesCache(slug?: string) {
+  serverCafesCacheTime = 0;
+  if (slug) {
+    serverCafeDetailCache.delete(slug);
+  } else {
+    serverCafeDetailCache.clear();
+  }
+}
+
 export const getCafe = createServerFn({ method: "GET" })
   .validator((d: { slug: string }) => ({ slug: String(d.slug).slice(0, 120) }))
   .handler(async ({ data }) => {

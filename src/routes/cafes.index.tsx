@@ -48,7 +48,15 @@ export const Route = createFileRoute("/cafes/")({
       {
         rel: "preload",
         as: "image",
+        href: "https://lh3.googleusercontent.com/grass-cs/AABkmLeUdP3oNXkf-uFBV1V1aiQ6cKF_9WKZ9NBic8R7DlIFUdpHgBi9pQevOde93ky2fBR4DIj2wOfPz4OAoXPBS3_vvuvzC54GTIDTceEzoE9ftt3G4ob-CEpjSKGZBIG6c-p0qIMgWtniE8pV=w400-h260-k-no-rw",
+        media: "(max-width: 640px)",
+        fetchPriority: "high" as const,
+      },
+      {
+        rel: "preload",
+        as: "image",
         href: "https://lh3.googleusercontent.com/grass-cs/AABkmLeUdP3oNXkf-uFBV1V1aiQ6cKF_9WKZ9NBic8R7DlIFUdpHgBi9pQevOde93ky2fBR4DIj2wOfPz4OAoXPBS3_vvuvzC54GTIDTceEzoE9ftt3G4ob-CEpjSKGZBIG6c-p0qIMgWtniE8pV=w640-h416-k-no-rw",
+        media: "(min-width: 641px)",
         fetchPriority: "high" as const,
       },
     ],
@@ -66,7 +74,7 @@ export const Route = createFileRoute("/cafes/")({
 });
 
 const PAGE_SIZE = 24;
-const INITIAL_RENDER_COUNT = 8;
+const INITIAL_RENDER_COUNT = 6;
 
 const AREA_FILTERS = [
   { value: "all", label: "كل المناطق" },
@@ -113,7 +121,7 @@ function CafesPage() {
     return map;
   }, [data]);
 
-  // Expand to full shown slice only during idle time (after LCP/FCP paint window) or on user scroll
+  // Expand to full shown slice on user scroll or after initial paint window completes
   useEffect(() => {
     if (renderLimit >= shown) return undefined;
 
@@ -127,9 +135,9 @@ function CafesPage() {
     if (typeof window !== "undefined") {
       const win = window as any;
       if ("requestIdleCallback" in win) {
-        idleId = win.requestIdleCallback(expand, { timeout: 2500 });
+        idleId = win.requestIdleCallback(expand, { timeout: 8000 });
       } else {
-        timeoutId = setTimeout(expand, 2500);
+        timeoutId = setTimeout(expand, 8000);
       }
 
       const onScroll = () => {
