@@ -138,7 +138,7 @@ export function HeroVideoBackground({
           src={posterSrc}
           alt={alt}
           fetchPriority="high"
-          decoding="sync"
+          decoding="async"
           className="h-full w-full object-cover object-[center_42%]"
         />
       </picture>

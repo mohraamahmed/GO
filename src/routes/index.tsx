@@ -33,22 +33,6 @@ import work from "@/assets/work.webp";
 
 export const Route = createFileRoute("/")({
   head: () => ({
-    links: [
-      {
-        rel: "preload",
-        as: "image",
-        href: "/hero-poster-mobile.webp",
-        media: "(max-width: 767px)",
-        fetchPriority: "high",
-      },
-      {
-        rel: "preload",
-        as: "image",
-        href: "/hero-poster.webp",
-        media: "(min-width: 768px)",
-        fetchPriority: "high",
-      },
-    ],
     meta: [
       { title: "CaféLens — اكتشف كافيهك المثالي في القاهرة" },
       { name: "description", content: "اكتشف مكانك المثالي، اعرف ميزانيتك، واستمتع بخروجة على مزاجك في القاهرة." },

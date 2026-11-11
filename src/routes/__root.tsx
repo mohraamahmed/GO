@@ -107,6 +107,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [
       {
+        rel: "preload",
+        as: "image",
+        href: "/hero-poster-mobile.webp",
+        media: "(max-width: 767px)",
+        fetchPriority: "high",
+      },
+      {
+        rel: "preload",
+        as: "image",
+        href: "/hero-poster.webp",
+        media: "(min-width: 768px)",
+        fetchPriority: "high",
+      },
+      {
         rel: "stylesheet",
         href: appCss,
       },

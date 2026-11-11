@@ -92,17 +92,23 @@ export default {
         }
       }
 
+      const reqStart = performance.now();
       const handler = await getServerEntry();
       // Provide robust fallback for execution contexts missing waitUntil (e.g. edge runtimes or testing)
       const safeCtx =
         ctx && typeof ctx === "object" && typeof (ctx as Record<string, unknown>)["waitUntil"] === "function"
           ? ctx
           : { waitUntil: () => { }, ...(typeof ctx === "object" ? ctx : {}) };
+      const ssrStart = performance.now();
       const response = await handler.fetch(request, env, safeCtx);
+      const ssrEnd = performance.now();
       const normalized = await normalizeCatastrophicSsrResponse(response);
+      const totalDur = performance.now() - reqStart;
+      const ssrDur = ssrEnd - ssrStart;
 
       // 2. Attach hardened security headers
       const secureHeaders = applySecurityHeaders(normalized.headers);
+      secureHeaders.set("Server-Timing", `total;dur=${totalDur.toFixed(1)}, ssr;dur=${ssrDur.toFixed(1)}`);
 
       // 3. Attach Edge Caching on public SSR GET pages (Homepage, Listing, Details)
       try {
