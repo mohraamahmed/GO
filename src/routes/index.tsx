@@ -14,8 +14,8 @@ import {
 } from "lucide-react";
 import { HeroVideoBackground } from "@/components/HeroVideoBackground";
 import { Button } from "@/components/ui/button";
-import { cafesQuery, moodQuery, menuQuery } from "@/lib/queries";
-import { AREA_CLASS_LABELS, type CafeListItem, type CafePhoto, type MoodResult } from "@/lib/cafes.functions";
+import { homepageQuery, cafesQuery, moodQuery, menuQuery } from "@/lib/queries";
+import { AREA_CLASS_LABELS, type CafeListItem, type CafePhoto, type MoodResult, type HomepageData } from "@/lib/cafes.functions";
 import { MOODS } from "@/lib/mood";
 import {
   getCafeMenuData, calculateCafeScoreWithFacilities, getCafeVerification,
@@ -64,7 +64,7 @@ export const Route = createFileRoute("/")({
       { name: "twitter:image", content: "https://cafe-lens1.vercel.app/og-image.jpg" },
     ],
   }),
-  loader: ({ context }) => context.queryClient.ensureQueryData(cafesQuery),
+  loader: ({ context }) => context.queryClient.ensureQueryData(homepageQuery),
   component: Index,
 });
 
@@ -159,10 +159,34 @@ function Index() {
   const [heroSearch, setHeroSearch] = useState("");
   const { openFavorites, openCompare, openSubscription } = useGlobalUI();
   const loaderData = Route.useLoaderData();
-  const { data: allCafes = loaderData } = useQuery({
-    ...cafesQuery,
+  const { data: homeData = loaderData } = useQuery({
+    ...homepageQuery,
     initialData: () => loaderData,
   });
+  const [loadFullCafes, setLoadFullCafes] = useState(false);
+  const { data: allCafes = homeData.featuredCafes } = useQuery({
+    ...cafesQuery,
+    enabled: loadFullCafes,
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const idleId =
+      "requestIdleCallback" in window
+        ? (window as any).requestIdleCallback(() => setLoadFullCafes(true), { timeout: 3500 })
+        : setTimeout(() => setLoadFullCafes(true), 1200);
+    const onScroll = () => {
+      setLoadFullCafes(true);
+      window.removeEventListener("scroll", onScroll);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      if ("cancelIdleCallback" in window) (window as any).cancelIdleCallback(idleId);
+      else clearTimeout(idleId);
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, []);
+
   const { data: authData } = useQuery({
     queryKey: ["current-user"],
     queryFn: () => getCurrentUserFn(),
@@ -172,15 +196,8 @@ function Index() {
   const subscription = authData?.subscription;
 
   const featuredCafes = useMemo(() => {
-    if (!allCafes || allCafes.length === 0) return [];
-    const scoreMap = new Map<string, number>();
-    for (const c of allCafes) {
-      scoreMap.set(c.id, calculateBayesianRating(Number(c.rating ?? 4.0), Number(c.rating_count ?? 15)));
-    }
-    return [...allCafes]
-      .sort((a, b) => (scoreMap.get(b.id) ?? 0) - (scoreMap.get(a.id) ?? 0))
-      .slice(0, 6);
-  }, [allCafes]);
+    return homeData.featuredCafes || [];
+  }, [homeData.featuredCafes]);
 
   const handleHeroSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -393,7 +410,7 @@ function Index() {
               to="/cafes"
               className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-primary hover:underline"
             >
-              عرض كل الكافيهات ({allCafes.length}) <ChevronLeft className="h-4 w-4" />
+              عرض كل الكافيهات ({homeData.totalCount}) <ChevronLeft className="h-4 w-4" />
             </Link>
           </div>
 
@@ -413,13 +430,15 @@ function Index() {
 
           <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
             {COVERAGE_AREAS.map((a) => {
-              const count = allCafes.filter((c) =>
-                a.key === "fifth_settlement"
-                  ? c.area_class === "fifth_settlement"
-                  : a.key === "sheikh_zayed"
-                    ? c.area_class === "sheikh_zayed"
-                    : c.area_class.startsWith("new_cairo")
-              ).length;
+              const count =
+                homeData.areaCounts?.[a.key as keyof typeof homeData.areaCounts] ??
+                allCafes.filter((c) =>
+                  a.key === "fifth_settlement"
+                    ? c.area_class === "fifth_settlement"
+                    : a.key === "sheikh_zayed"
+                      ? c.area_class === "sheikh_zayed"
+                      : c.area_class.startsWith("new_cairo")
+                ).length;
 
               return (
                 <div

@@ -98,6 +98,62 @@ const INITIAL_FALLBACK_CAFES: CafeListItem[] = (LOCAL_CAFES as unknown as any[])
   .map(toCompactCafe)
   .sort((a, b) => Number(b.rating_count ?? 0) - Number(a.rating_count ?? 0));
 
+export type HomepageData = {
+  featuredCafes: CafeListItem[];
+  totalCount: number;
+  areaCounts: {
+    fifth_settlement: number;
+    sheikh_zayed: number;
+    new_cairo: number;
+  };
+};
+
+function bayesianScore(rating: number, count: number): number {
+  const m = 15;
+  const C = 4.0;
+  const R = rating || C;
+  const v = count || 0;
+  return Number(((v / (v + m)) * R + (m / (v + m)) * C).toFixed(2));
+}
+
+function computeHomepageData(cafes: CafeListItem[]): HomepageData {
+  const scoreMap = new Map<string, number>();
+  for (const c of cafes) {
+    scoreMap.set(c.id, bayesianScore(Number(c.rating ?? 4.0), Number(c.rating_count ?? 15)));
+  }
+  const featuredCafes = [...cafes]
+    .sort((a, b) => (scoreMap.get(b.id) ?? 0) - (scoreMap.get(a.id) ?? 0))
+    .slice(0, 6);
+
+  const fifth_settlement = cafes.filter((c) => c.area_class === "fifth_settlement").length;
+  const sheikh_zayed = cafes.filter((c) => c.area_class === "sheikh_zayed").length;
+  const new_cairo = cafes.filter((c) => (c.area_class || "").startsWith("new_cairo")).length;
+
+  return {
+    featuredCafes,
+    totalCount: cafes.length,
+    areaCounts: {
+      fifth_settlement,
+      sheikh_zayed,
+      new_cairo,
+    },
+  };
+}
+
+let serverHomepageCache: HomepageData = computeHomepageData(INITIAL_FALLBACK_CAFES);
+let serverHomepageCacheTime = Date.now();
+
+export const getHomepageData = createServerFn({ method: "GET" }).handler(async (): Promise<HomepageData> => {
+  const isExpired = Date.now() - serverHomepageCacheTime >= SERVER_CACHE_TTL;
+  if (!isExpired && serverHomepageCache) {
+    return serverHomepageCache;
+  }
+  const cafes = serverCafesCache.length > 0 ? serverCafesCache : INITIAL_FALLBACK_CAFES;
+  serverHomepageCache = computeHomepageData(cafes);
+  serverHomepageCacheTime = Date.now();
+  return serverHomepageCache;
+});
+
 const localCafeMap = new Map<string, CafeRow>();
 for (const c of LOCAL_CAFES as unknown as CafeRow[]) {
   if (c.slug) localCafeMap.set(c.slug, c);
@@ -136,6 +192,7 @@ const serverCafeDetailCache = new Map<string, { data: CafeRow; time: number }>()
 /** Invalidate server-side in-memory cache on demand (e.g. after admin updates) */
 export function invalidateServerCafesCache(slug?: string) {
   serverCafesCacheTime = 0;
+  serverHomepageCacheTime = 0;
   if (slug) {
     serverCafeDetailCache.delete(slug);
   } else {
