@@ -104,28 +104,14 @@ function CafesPage() {
   });
   const data = fullCafes && fullCafes.length > 0 ? fullCafes : initialData.initialCafes;
 
-  // Trigger full cafes query in idle time or on user interaction
+  // Trigger full cafes query seamlessly on user interaction (scroll)
   useEffect(() => {
     if (typeof window === "undefined" || loadFullCafes) return undefined;
-    const win = window as any;
-    let idleId: any;
-    let timeoutId: any;
-
     const trigger = () => {
       setLoadFullCafes(true);
-      window.removeEventListener("scroll", trigger);
     };
-
-    if ("requestIdleCallback" in win) {
-      idleId = win.requestIdleCallback(trigger, { timeout: 2000 });
-    } else {
-      timeoutId = setTimeout(trigger, 800);
-    }
     window.addEventListener("scroll", trigger, { passive: true, once: true });
-
     return () => {
-      if ("cancelIdleCallback" in win && idleId) win.cancelIdleCallback(idleId);
-      if (timeoutId) clearTimeout(timeoutId);
       window.removeEventListener("scroll", trigger);
     };
   }, [loadFullCafes]);
@@ -229,6 +215,7 @@ function CafesPage() {
   );
 
   const resetAllFilters = () => {
+    setLoadFullCafes(true);
     setSearchInput("");
     navigate({ to: "/cafes", search: {} as any });
     setShown(PAGE_SIZE);
@@ -618,21 +605,29 @@ function CafesPage() {
           )}
 
           {/* Pagination / View More */}
-          {shown < filteredList.length && (
-            <div className="mt-10 flex flex-col items-center gap-2">
-              <span className="text-xs text-muted-foreground">
-                عرض {shown} من أصل {filteredList.length} كافيه
-              </span>
-              <Button
-                variant="gold-outline"
-                size="lg"
-                onClick={() => setShown((s) => s + PAGE_SIZE)}
-                className="rounded-2xl font-bold px-8 shadow-sm"
-              >
-                عرض المزيد من الكافيهات (+{PAGE_SIZE})
-              </Button>
-            </div>
-          )}
+          {(() => {
+            const displayTotal = fullCafes && fullCafes.length > 0 ? filteredList.length : (initialData.totalCount || 499);
+            const hasMore = shown < displayTotal;
+            if (!hasMore) return null;
+            return (
+              <div className="mt-10 flex flex-col items-center gap-2">
+                <span className="text-xs text-muted-foreground">
+                  عرض {Math.min(shown, displayTotal)} من أصل {displayTotal} كافيه
+                </span>
+                <Button
+                  variant="gold-outline"
+                  size="lg"
+                  onClick={() => {
+                    setLoadFullCafes(true);
+                    setShown((s) => s + PAGE_SIZE);
+                  }}
+                  className="rounded-2xl font-bold px-8 shadow-sm"
+                >
+                  عرض المزيد من الكافيهات (+{PAGE_SIZE})
+                </Button>
+              </div>
+            );
+          })()}
         </section>
       </main>
     </div>

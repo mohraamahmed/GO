@@ -42,11 +42,12 @@ function publicClient() {
 }
 
 function bayesianScore(rating: number, count: number): number {
-  const m = 15;
-  const C = 4.0;
-  const R = rating || C;
-  const v = count || 0;
-  return Number(((v / (v + m)) * R + (m / (v + m)) * C).toFixed(2));
+  const v = Math.max(0, count);
+  const r = Math.max(1, Math.min(5, rating));
+  const m = 40;
+  const c = 4.35;
+  const weighted = (v / (v + m)) * r + (m / (v + m)) * c;
+  return Number(weighted.toFixed(2));
 }
 
 // Map attributes by cafe_id for fast lookup
@@ -56,9 +57,14 @@ for (const a of LOCAL_ATTRS as any[]) {
 }
 
 // Pre-initialize in-memory caches from local data so serverless instances NEVER cold-wait on external network
+// Sorted identically to the client's default Bayesian ranking to eliminate any layout shift between SSR and hydration
 const INITIAL_FALLBACK_CAFES: CafeListItem[] = (LOCAL_CAFES as unknown as any[])
   .map(toCompactCafe)
-  .sort((a, b) => Number(b.rating_count ?? 0) - Number(a.rating_count ?? 0));
+  .sort((a, b) => {
+    const scoreB = bayesianScore(Number(b.rating ?? 4.0), Number(b.rating_count ?? 15));
+    const scoreA = bayesianScore(Number(a.rating ?? 4.0), Number(a.rating_count ?? 15));
+    return scoreB - scoreA;
+  });
 
 const localCafeMap = new Map<string, CafeRow>();
 for (const c of LOCAL_CAFES as unknown as CafeRow[]) {
