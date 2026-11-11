@@ -99,7 +99,7 @@ export function SmartImage({
             src={srcDesktop}
             alt={alt}
             loading="eager"
-            decoding="sync"
+            decoding="async"
             fetchPriority="high"
             referrerPolicy={referrerPolicy}
             onLoad={handleLoad}

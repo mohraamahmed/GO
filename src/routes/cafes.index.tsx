@@ -492,7 +492,7 @@ function CafesPage() {
                 return (
                   <div
                     key={c.id}
-                    className="group relative rounded-2xl border border-border/70 bg-card overflow-hidden hover:border-primary/50 transition duration-300 shadow-sm hover:shadow-lg flex flex-col justify-between"
+                    className="group relative rounded-2xl border border-border/70 bg-card overflow-hidden hover:border-primary/50 transition duration-300 shadow-sm hover:shadow-lg flex flex-col justify-between cv-card"
                   >
                     <div>
                       {/* Media container */}

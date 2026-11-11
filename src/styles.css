@@ -661,3 +661,8 @@
   content-visibility: auto;
   contain-intrinsic-size: 1px 600px;
 }
+
+.cv-card {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 380px;
+}

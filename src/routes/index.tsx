@@ -154,22 +154,19 @@ function Index() {
   });
 
   useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-    const idleId =
-      "requestIdleCallback" in window
-        ? (window as any).requestIdleCallback(() => setLoadFullCafes(true), { timeout: 3500 })
-        : setTimeout(() => setLoadFullCafes(true), 1200);
-    const onScroll = () => {
+    if (typeof window === "undefined" || loadFullCafes) return undefined;
+    const trigger = () => {
       setLoadFullCafes(true);
-      window.removeEventListener("scroll", onScroll);
     };
-    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("scroll", trigger, { passive: true, once: true });
+    window.addEventListener("touchstart", trigger, { passive: true, once: true });
+    window.addEventListener("pointerdown", trigger, { passive: true, once: true });
     return () => {
-      if ("cancelIdleCallback" in window) (window as any).cancelIdleCallback(idleId);
-      else clearTimeout(idleId);
-      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("scroll", trigger);
+      window.removeEventListener("touchstart", trigger);
+      window.removeEventListener("pointerdown", trigger);
     };
-  }, []);
+  }, [loadFullCafes]);
 
   const { data: authData } = useQuery({
     queryKey: ["current-user"],
@@ -384,7 +381,7 @@ function Index() {
       <main id="areas" className="relative z-10 mx-auto w-full max-w-6xl space-y-14 sm:space-y-20 px-3 sm:px-5 pt-8 sm:pt-14 pb-20">
 
         {/* 1. FEATURED CAFES */}
-        <section aria-label="كافيهات مميزة" className="space-y-5">
+        <section aria-label="كافيهات مميزة" className="space-y-5 cv-auto">
           <div className="reveal flex flex-wrap items-end justify-between gap-3 border-b border-border/60 pb-3">
             <div>
               <span className="text-xs font-semibold uppercase tracking-wider text-primary">مختارات النخبة</span>
@@ -406,7 +403,7 @@ function Index() {
         </section>
 
         {/* 2. COVERAGE AREAS */}
-        <section aria-label="مناطق التغطية" className="space-y-5">
+        <section aria-label="مناطق التغطية" className="space-y-5 cv-auto">
           <div className="reveal border-b border-border/60 pb-3">
             <span className="text-xs font-semibold uppercase tracking-wider text-primary">خريطة التغطية</span>
             <h2 className="font-display text-2xl md:text-3xl font-bold">مناطق التغطية المعتمدة</h2>
@@ -452,7 +449,7 @@ function Index() {
         </section>
 
         {/* 3. PLATFORM ADVANTAGES */}
-        <section aria-label="مميزات المنصة" className="space-y-5">
+        <section aria-label="مميزات المنصة" className="space-y-5 cv-auto">
           <div className="reveal border-b border-border/60 pb-3">
             <span className="text-xs font-semibold uppercase tracking-wider text-primary">لماذا CaféLens؟</span>
             <h2 className="font-display text-2xl md:text-3xl font-bold">معايير الدقة والشفافية في خروجتك</h2>
@@ -472,7 +469,7 @@ function Index() {
         </section>
 
         {/* 4. VIP SUBSCRIPTION CALLOUT */}
-        <section aria-label="الاشتراك الفاخر" className="rounded-3xl border border-primary/40 bg-gradient-to-r from-card/90 via-primary/5 to-card/90 p-6 sm:p-8 shadow-xl">
+        <section aria-label="الاشتراك الفاخر" className="rounded-3xl border border-primary/40 bg-gradient-to-r from-card/90 via-primary/5 to-card/90 p-6 sm:p-8 shadow-xl cv-auto">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-2 max-w-xl">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-0.5 text-xs font-bold text-primary">
@@ -559,7 +556,7 @@ function CafeCard({ c, reason, priority = false }: { c: CafeListItem; reason?: s
   const bayesian = calculateBayesianRating(ratingNum, reviewsNum);
 
   return (
-    <Link to="/cafes/$slug" params={{ slug: c.slug }} className="cafe-card group block relative rounded-2xl border border-border/70 bg-card overflow-hidden hover:border-primary/50 transition duration-300 shadow-sm hover:shadow-lg">
+    <Link to="/cafes/$slug" params={{ slug: c.slug }} className="cafe-card group block relative rounded-2xl border border-border/70 bg-card overflow-hidden hover:border-primary/50 transition duration-300 shadow-sm hover:shadow-lg cv-card">
       <div className="cafe-media relative h-52 sm:h-56 w-full overflow-hidden bg-muted">
         <SmartImage
           src={photo?.url}
@@ -1854,7 +1851,7 @@ function Explore({ mood, area, allCafes = [] }: { mood: number | null; area: Are
 
   return <>
     {/* CATEGORIES */}
-    <section aria-label="اكتشف الكافيهات">
+    <section aria-label="اكتشف الكافيهات" className="cv-auto">
       <div className="reveal mb-5 flex items-end justify-between">
         <h2 className="font-display text-2xl md:text-3xl">اكتشف الكافيهات</h2>
         {cat && <button onClick={() => setCat(null)} className="text-sm text-primary">إلغاء التصنيف</button>}
