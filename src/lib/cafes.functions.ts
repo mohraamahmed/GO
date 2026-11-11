@@ -93,12 +93,23 @@ for (const a of LOCAL_ATTRS as any[]) {
   if (a.cafe_id) attrsMap.set(a.cafe_id, a);
 }
 
-let serverCafesCache: CafeListItem[] | null = null;
-let serverCafesCacheTime = 0;
-const SERVER_CACHE_TTL = 120_000; // 2 minutes in-memory cache
+// Pre-initialize in-memory caches from local data so serverless instances NEVER cold-wait on external network
+const INITIAL_FALLBACK_CAFES: CafeListItem[] = (LOCAL_CAFES as unknown as any[])
+  .map(toCompactCafe)
+  .sort((a, b) => Number(b.rating_count ?? 0) - Number(a.rating_count ?? 0));
+
+const localCafeMap = new Map<string, CafeRow>();
+for (const c of LOCAL_CAFES as unknown as CafeRow[]) {
+  if (c.slug) localCafeMap.set(c.slug, c);
+}
+
+let serverCafesCache: CafeListItem[] = INITIAL_FALLBACK_CAFES;
+let serverCafesCacheTime = Date.now();
+const SERVER_CACHE_TTL = 30 * 60_000; // 30 minutes in-memory cache
 
 export const listCafes = createServerFn({ method: "GET" }).handler(async () => {
-  if (serverCafesCache && Date.now() - serverCafesCacheTime < SERVER_CACHE_TTL) {
+  const isExpired = Date.now() - serverCafesCacheTime >= SERVER_CACHE_TTL;
+  if (!isExpired && serverCafesCache.length > 0) {
     return serverCafesCache;
   }
   try {
@@ -115,12 +126,9 @@ export const listCafes = createServerFn({ method: "GET" }).handler(async () => {
   } catch {
     // fallback below
   }
-  const fallback = (LOCAL_CAFES as unknown as any[])
-    .map(toCompactCafe)
-    .sort((a, b) => Number(b.rating_count ?? 0) - Number(a.rating_count ?? 0));
-  serverCafesCache = fallback;
+  serverCafesCache = INITIAL_FALLBACK_CAFES;
   serverCafesCacheTime = Date.now();
-  return fallback;
+  return serverCafesCache;
 });
 
 const serverCafeDetailCache = new Map<string, { data: CafeRow; time: number }>();
@@ -132,6 +140,11 @@ export const getCafe = createServerFn({ method: "GET" })
     if (cached && Date.now() - cached.time < SERVER_CACHE_TTL) {
       return cached.data;
     }
+    const localFound = localCafeMap.get(data.slug);
+    if (localFound) {
+      serverCafeDetailCache.set(data.slug, { data: localFound, time: Date.now() });
+      return localFound;
+    }
     try {
       const { data: row, error } = await publicClient().from("cafes").select("*").eq("slug", data.slug).maybeSingle();
       if (!error && row) {
@@ -142,8 +155,7 @@ export const getCafe = createServerFn({ method: "GET" })
     } catch {
       // fallback below
     }
-    const found = (LOCAL_CAFES as unknown as CafeRow[]).find((c) => c.slug === data.slug);
-    return found ?? null;
+    return null;
   });
 
 export type MoodResult = CafeListItem & { moodScore: number; reasons: string[] };

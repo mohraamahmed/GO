@@ -45,6 +45,12 @@ export const Route = createFileRoute("/cafes/")({
   head: () => ({
     links: [
       { rel: "preconnect", href: "https://lh3.googleusercontent.com" },
+      {
+        rel: "preload",
+        as: "image",
+        href: "https://lh3.googleusercontent.com/grass-cs/AABkmLeUdP3oNXkf-uFBV1V1aiQ6cKF_9WKZ9NBic8R7DlIFUdpHgBi9pQevOde93ky2fBR4DIj2wOfPz4OAoXPBS3_vvuvzC54GTIDTceEzoE9ftt3G4ob-CEpjSKGZBIG6c-p0qIMgWtniE8pV=w640-h416-k-no-rw",
+        fetchPriority: "high" as const,
+      },
     ],
     meta: [
       { title: "دليل الكافيهات الموثقة — القاهرة الجديدة والشيخ زايد | CaféLens" },
@@ -78,7 +84,11 @@ const SERVICE_FILTERS = [
 ];
 
 function CafesPage() {
-  const { data: allCafes = [] } = useQuery(cafesQuery);
+  const loaderData = Route.useLoaderData();
+  const { data: allCafes = loaderData } = useQuery({
+    ...cafesQuery,
+    initialData: () => loaderData,
+  });
   const data = allCafes;
   const searchParams = Route.useSearch();
   const navigate = useNavigate();

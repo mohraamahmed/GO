@@ -93,7 +93,36 @@ function CafePage() {
   const { slug } = Route.useParams();
   const loaderData = Route.useLoaderData();
   const { data: c = loaderData } = useQuery(cafeQuery(slug));
-  const { data: allCafes = [] } = useQuery(cafesQuery);
+  const [loadAlternatives, setLoadAlternatives] = useState(false);
+
+  // Defer allCafes network query to idle time or scroll so it never contends with the hero photo on initial mount
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const win = window as any;
+    let idleId: any;
+    let timeoutId: any;
+    const trigger = () => setLoadAlternatives(true);
+    if ("requestIdleCallback" in win) {
+      idleId = win.requestIdleCallback(trigger, { timeout: 2500 });
+    } else {
+      timeoutId = setTimeout(trigger, 2500);
+    }
+    const onScroll = () => {
+      trigger();
+      window.removeEventListener("scroll", onScroll);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true, once: true });
+    return () => {
+      if ("cancelIdleCallback" in win && idleId) win.cancelIdleCallback(idleId);
+      clearTimeout(timeoutId);
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, []);
+
+  const { data: allCafes = [] } = useQuery({
+    ...cafesQuery,
+    enabled: loadAlternatives,
+  });
   const menuQ = useQuery({ ...menuQuery(c?.id ?? ""), enabled: !!c?.id });
 
   // UI state
