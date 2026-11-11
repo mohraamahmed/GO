@@ -19,6 +19,7 @@ export function HeroVideoBackground({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
+  const [loadVideo, setLoadVideo] = useState(false);
 
   useEffect(() => {
     const checkDesktop = () => {
@@ -30,7 +31,22 @@ export function HeroVideoBackground({
   }, []);
 
   useEffect(() => {
-    if (!isDesktop) return;
+    if (!isDesktop) return undefined;
+    if (typeof window !== "undefined") {
+      const win = window as any;
+      const id = "requestIdleCallback" in win
+        ? win.requestIdleCallback(() => setLoadVideo(true), { timeout: 3000 })
+        : setTimeout(() => setLoadVideo(true), 1500);
+      return () => {
+        if ("cancelIdleCallback" in win) win.cancelIdleCallback(id);
+        else clearTimeout(id);
+      };
+    }
+    return undefined;
+  }, [isDesktop]);
+
+  useEffect(() => {
+    if (!isDesktop || !loadVideo) return;
     const video = videoRef.current;
     if (!video) return;
 
@@ -122,7 +138,7 @@ export function HeroVideoBackground({
       removeInteractionListeners();
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [isDesktop]);
+  }, [isDesktop, loadVideo]);
 
   return (
     <div
@@ -144,7 +160,7 @@ export function HeroVideoBackground({
       </picture>
 
       {/* 2. Hardware-Accelerated Video Player (Rendered on desktop viewports to eliminate 2.4MB mobile congestion) */}
-      {isDesktop && (
+      {isDesktop && loadVideo && (
         <video
           ref={videoRef}
           autoPlay

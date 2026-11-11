@@ -107,20 +107,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [
       {
-        rel: "preload",
-        as: "image",
-        href: "/hero-poster-mobile.webp",
-        media: "(max-width: 767px)",
-        fetchPriority: "high",
-      },
-      {
-        rel: "preload",
-        as: "image",
-        href: "/hero-poster.webp",
-        media: "(min-width: 768px)",
-        fetchPriority: "high",
-      },
-      {
         rel: "stylesheet",
         href: appCss,
       },
@@ -143,6 +129,20 @@ function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="ar" dir="rtl" className="overflow-x-hidden">
       <head>
+        <link
+          rel="preload"
+          as="image"
+          href="/hero-poster-mobile.webp"
+          media="(max-width: 767px)"
+          fetchPriority="high"
+        />
+        <link
+          rel="preload"
+          as="image"
+          href="/hero-poster.webp"
+          media="(min-width: 768px)"
+          fetchPriority="high"
+        />
         <HeadContent />
       </head>
       <body className="overflow-x-hidden w-full max-w-full">
