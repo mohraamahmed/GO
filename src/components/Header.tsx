@@ -34,10 +34,15 @@ export function Header() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { openFavorites, openCompare, openSubscription, favoritesCount, compareCount } = useGlobalUI();
 
+  const hasSession = typeof document !== "undefined" && document.cookie.includes("cfl_session");
   const { data: authData } = useQuery({
     queryKey: ["current-user"],
     queryFn: () => getCurrentUserFn(),
-    staleTime: 60_000,
+    enabled: hasSession,
+    staleTime: 10 * 60_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const user = authData?.user;

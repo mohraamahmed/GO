@@ -39,7 +39,24 @@ export const Route = createFileRoute("/cafes/$slug")({
     return {
       links: [
         { rel: "preconnect", href: "https://lh3.googleusercontent.com" },
-        ...(photo ? [{ rel: "preload", as: "image", href: optimizeImgUrl(photo, 640), fetchPriority: "high" as const }] : []),
+        ...(photo
+          ? [
+              {
+                rel: "preload",
+                as: "image",
+                href: optimizeImgUrl(photo, 400),
+                media: "(max-width: 640px)",
+                fetchPriority: "high" as const,
+              },
+              {
+                rel: "preload",
+                as: "image",
+                href: optimizeImgUrl(photo, 640),
+                media: "(min-width: 641px)",
+                fetchPriority: "high" as const,
+              },
+            ]
+          : []),
       ],
       meta: [
         { title },
@@ -92,7 +109,14 @@ const SERVICE_ICONS: Record<string, typeof Wifi> = {
 function CafePage() {
   const { slug } = Route.useParams();
   const loaderData = Route.useLoaderData();
-  const { data: c = loaderData } = useQuery(cafeQuery(slug));
+  const { data: c = loaderData } = useQuery({
+    ...cafeQuery(slug),
+    initialData: () => loaderData,
+    initialDataUpdatedAt: () => Date.now(),
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
   const [loadAlternatives, setLoadAlternatives] = useState(false);
 
   // Defer allCafes network query to idle time or scroll so it never contends with the hero photo on initial mount
@@ -142,10 +166,15 @@ function CafePage() {
   const [isFav, setIsFav] = useState(false);
   const [inCompare, setInCompare] = useState(false);
 
+  const hasSession = typeof document !== "undefined" && document.cookie.includes("cfl_session");
   const { data: authData } = useQuery({
     queryKey: ["current-user"],
     queryFn: () => getCurrentUserFn(),
-    staleTime: 60_000,
+    enabled: hasSession,
+    staleTime: 10 * 60_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
   const user = authData?.user;
   const isSubscribed = Boolean(authData?.subscription?.hasActiveSubscription || user?.role === "ADMIN");

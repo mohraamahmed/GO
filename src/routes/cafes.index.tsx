@@ -96,6 +96,10 @@ function CafesPage() {
   const { data: initialData = loaderData } = useQuery({
     ...listingInitialQuery,
     initialData: () => loaderData,
+    initialDataUpdatedAt: () => Date.now(),
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
   const [loadFullCafes, setLoadFullCafes] = useState(false);
   const { data: fullCafes } = useQuery({

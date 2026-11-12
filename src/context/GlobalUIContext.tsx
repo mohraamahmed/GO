@@ -45,14 +45,22 @@ export function GlobalUIProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("cafelens_storage_update", syncCounts);
   }, []);
 
-  // Cafes query for modals
-  const { data: allCafes = [] } = useQuery(cafesQuery);
+  // Cafes query for modals (deferred until a modal actually opens)
+  const { data: allCafes = [] } = useQuery({
+    ...cafesQuery,
+    enabled: isFavoritesOpen || isCompareOpen,
+  });
 
   // Current user query for subscription modal & auth state
+  const hasSession = typeof document !== "undefined" && document.cookie.includes("cfl_session");
   const { data: authData } = useQuery({
     queryKey: ["current-user"],
     queryFn: () => getCurrentUserFn(),
-    staleTime: 60_000,
+    enabled: hasSession || isSubscriptionOpen,
+    staleTime: 10 * 60_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   return (

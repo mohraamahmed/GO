@@ -146,6 +146,10 @@ function Index() {
   const { data: homeData = loaderData } = useQuery({
     ...homepageQuery,
     initialData: () => loaderData,
+    initialDataUpdatedAt: () => Date.now(),
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
   const [loadFullCafes, setLoadFullCafes] = useState(false);
   const { data: allCafes = homeData.featuredCafes } = useQuery({
@@ -168,10 +172,15 @@ function Index() {
     };
   }, [loadFullCafes]);
 
+  const hasSession = typeof document !== "undefined" && document.cookie.includes("cfl_session");
   const { data: authData } = useQuery({
     queryKey: ["current-user"],
     queryFn: () => getCurrentUserFn(),
-    staleTime: 60_000,
+    enabled: hasSession,
+    staleTime: 10 * 60_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
   const user = authData?.user;
   const subscription = authData?.subscription;
@@ -191,40 +200,39 @@ function Index() {
   };
 
   useEffect(() => {
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+    if (isMobile) return undefined;
+
     gsap.registerPlugin(ScrollTrigger);
     const ctx = gsap.context(() => {
-      const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
-      
       // On desktop, execute the full luxury entrance choreographed sequence
-      if (!isMobile) {
-        const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-        tl.fromTo(".hero-canvas", { opacity: 0 }, { opacity: 1, duration: 0.6, clearProps: "all" })
-          .fromTo(".nav-item", { y: -20, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.08, duration: 0.5, clearProps: "all" }, "-=0.4")
-          .fromTo(".hero-line", { y: 25, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.08, duration: 0.5, clearProps: "all" }, "-=0.3")
-          .fromTo(".hero-sub", { y: 15, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, clearProps: "all" }, "-=0.3")
-          .fromTo(".hero-rule", { scaleX: 0, transformOrigin: "right" }, { scaleX: 1, duration: 0.5, clearProps: "all" }, "-=0.2")
-          .fromTo(".hero-search-box", { y: 15, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, clearProps: "all" }, "-=0.2")
-          .fromTo(".mood-picker-box", { y: 15, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, clearProps: "all" }, "-=0.2")
-          .fromTo(".mood", { y: 10, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.04, duration: 0.4, clearProps: "all" }, "-=0.3");
+      const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+      tl.fromTo(".hero-canvas", { opacity: 0 }, { opacity: 1, duration: 0.6, clearProps: "all" })
+        .fromTo(".nav-item", { y: -20, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.08, duration: 0.5, clearProps: "all" }, "-=0.4")
+        .fromTo(".hero-line", { y: 25, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.08, duration: 0.5, clearProps: "all" }, "-=0.3")
+        .fromTo(".hero-sub", { y: 15, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, clearProps: "all" }, "-=0.3")
+        .fromTo(".hero-rule", { scaleX: 0, transformOrigin: "right" }, { scaleX: 1, duration: 0.5, clearProps: "all" }, "-=0.2")
+        .fromTo(".hero-search-box", { y: 15, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, clearProps: "all" }, "-=0.2")
+        .fromTo(".mood-picker-box", { y: 15, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, clearProps: "all" }, "-=0.2")
+        .fromTo(".mood", { y: 10, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.04, duration: 0.4, clearProps: "all" }, "-=0.3");
 
-        gsap.to(".hero-text", {
-          yPercent: -20, opacity: 0.3, ease: "none",
-          scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: true },
-        });
-        // Defer offscreen ScrollTrigger measurements to idle time to eliminate main-thread freeze
-        const setupScrollTriggers = () => {
-          gsap.utils.toArray<HTMLElement>(".reveal").forEach((el) =>
-            gsap.from(el, { y: 40, opacity: 0, duration: 0.8, ease: "power3.out", scrollTrigger: { trigger: el, start: "top bottom-=40", once: true } }),
-          );
-          gsap.from(".cat", { y: 50, opacity: 0, stagger: 0.1, duration: 0.9, ease: "power3.out", clearProps: "transform,opacity", scrollTrigger: { trigger: ".cats", start: "top bottom-=40", once: true } });
-          ScrollTrigger.refresh();
-        };
+      gsap.to(".hero-text", {
+        yPercent: -20, opacity: 0.3, ease: "none",
+        scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: true },
+      });
+      // Defer offscreen ScrollTrigger measurements to idle time to eliminate main-thread freeze
+      const setupScrollTriggers = () => {
+        gsap.utils.toArray<HTMLElement>(".reveal").forEach((el) =>
+          gsap.from(el, { y: 40, opacity: 0, duration: 0.8, ease: "power3.out", scrollTrigger: { trigger: el, start: "top bottom-=40", once: true } }),
+        );
+        gsap.from(".cat", { y: 50, opacity: 0, stagger: 0.1, duration: 0.9, ease: "power3.out", clearProps: "transform,opacity", scrollTrigger: { trigger: ".cats", start: "top bottom-=40", once: true } });
+        ScrollTrigger.refresh();
+      };
 
-        if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-          (window as any).requestIdleCallback(setupScrollTriggers, { timeout: 2000 });
-        } else {
-          setTimeout(setupScrollTriggers, 150);
-        }
+      if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+        (window as any).requestIdleCallback(setupScrollTriggers, { timeout: 2000 });
+      } else {
+        setTimeout(setupScrollTriggers, 150);
       }
     }, root);
     return () => ctx.revert();
@@ -239,7 +247,7 @@ function Index() {
     const g = glow.current, s = strip.current;
     if (!g || !s) return;
     if (moodRef.current == null) {
-      gsap.to(g, { opacity: 0, duration: animate ? 0.4 : 0, overwrite: true });
+      g.style.opacity = "0";
       return;
     }
     const btn = s.querySelectorAll<HTMLElement>(".mood-option")[moodRef.current];

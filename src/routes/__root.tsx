@@ -15,6 +15,7 @@ import { Header } from "@/components/Header";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { Footer } from "@/components/Footer";
 import { Toaster } from "@/components/ui/sonner";
+import { optimizeImgUrl } from "@/components/SmartImage";
 
 import appCss from "../styles.css?url";
 
@@ -126,23 +127,70 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function RootShell({ children }: { children: ReactNode }) {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const matches = useRouterState({ select: (s) => s.matches });
+  const isHome = pathname === "/";
+  const isCafes = pathname === "/cafes" || pathname === "/cafes/";
+  const cafeMatch = matches.find((m) => m.routeId === "/cafes/$slug");
+  const cafePhoto = (cafeMatch?.loaderData as any)?.photos?.[0]?.url;
+
   return (
     <html lang="ar" dir="rtl" className="overflow-x-hidden">
       <head>
-        <link
-          rel="preload"
-          as="image"
-          href="/hero-poster-mobile.webp"
-          media="(max-width: 767px)"
-          fetchPriority="high"
-        />
-        <link
-          rel="preload"
-          as="image"
-          href="/hero-poster.webp"
-          media="(min-width: 768px)"
-          fetchPriority="high"
-        />
+        {isHome && (
+          <>
+            <link
+              rel="preload"
+              as="image"
+              href="/hero-poster-mobile.webp"
+              media="(max-width: 767px)"
+              fetchPriority="high"
+            />
+            <link
+              rel="preload"
+              as="image"
+              href="/hero-poster.webp"
+              media="(min-width: 768px)"
+              fetchPriority="high"
+            />
+          </>
+        )}
+        {isCafes && (
+          <>
+            <link
+              rel="preload"
+              as="image"
+              href="https://lh3.googleusercontent.com/grass-cs/AABkmLeUdP3oNXkf-uFBV1V1aiQ6cKF_9WKZ9NBic8R7DlIFUdpHgBi9pQevOde93ky2fBR4DIj2wOfPz4OAoXPBS3_vvuvzC54GTIDTceEzoE9ftt3G4ob-CEpjSKGZBIG6c-p0qIMgWtniE8pV=w400-h260-k-no-rw"
+              media="(max-width: 640px)"
+              fetchPriority="high"
+            />
+            <link
+              rel="preload"
+              as="image"
+              href="https://lh3.googleusercontent.com/grass-cs/AABkmLeUdP3oNXkf-uFBV1V1aiQ6cKF_9WKZ9NBic8R7DlIFUdpHgBi9pQevOde93ky2fBR4DIj2wOfPz4OAoXPBS3_vvuvzC54GTIDTceEzoE9ftt3G4ob-CEpjSKGZBIG6c-p0qIMgWtniE8pV=w640-h416-k-no-rw"
+              media="(min-width: 641px)"
+              fetchPriority="high"
+            />
+          </>
+        )}
+        {cafePhoto && (
+          <>
+            <link
+              rel="preload"
+              as="image"
+              href={optimizeImgUrl(cafePhoto, 400)}
+              media="(max-width: 640px)"
+              fetchPriority="high"
+            />
+            <link
+              rel="preload"
+              as="image"
+              href={optimizeImgUrl(cafePhoto, 640)}
+              media="(min-width: 641px)"
+              fetchPriority="high"
+            />
+          </>
+        )}
         <HeadContent />
       </head>
       <body className="overflow-x-hidden w-full max-w-full">
